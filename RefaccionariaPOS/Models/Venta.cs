@@ -8,6 +8,29 @@ namespace RefaccionariaPOS.Models
         public int Folio { get; set; }
         public DateTime Fecha { get; set; }
         public decimal Total { get; set; }
-        public string Estado { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public string MetodoPago { get; set; } = string.Empty;
+        public string Origen
+        {
+            get
+            {
+                if (MetodoPago.StartsWith("Taller - Refacciones", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Taller - Refacciones";
+                }
+
+                if (MetodoPago.StartsWith("Taller -", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Taller - Servicio";
+                }
+
+                if (MetodoPago.Equals("Surtido Taller", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Surtido a taller";
+                }
+
+                return "Mostrador";
+            }
+        }
     }
 }

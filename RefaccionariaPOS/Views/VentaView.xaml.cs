@@ -16,7 +16,7 @@ namespace RefaccionariaPOS.Views
     {
         private ObservableCollection<ProductoCarrito> listaCarrito = new ObservableCollection<ProductoCarrito>();
         private decimal totalVenta = 0;
-        private Producto productoEnVistaPrevia; // Reutilizamos tu variable perfectamente
+        private Producto? productoEnVistaPrevia; // Reutilizamos tu variable perfectamente
 
         public VentaView()
         {
@@ -63,8 +63,8 @@ namespace RefaccionariaPOS.Views
                             {
                                 resultados.Add(new Producto
                                 {
-                                    CodigoBarras = reader["codigo_barras"].ToString(),
-                                    Nombre = reader["nombre"].ToString(),
+                                    CodigoBarras = reader["codigo_barras"].ToString() ?? string.Empty,
+                                    Nombre = reader["nombre"].ToString() ?? string.Empty,
                                     PrecioVenta = Convert.ToDecimal(reader["precio_venta"]),
                                     Stock = Convert.ToInt32(reader["stock_actual"])
                                 });
@@ -212,8 +212,8 @@ namespace RefaccionariaPOS.Views
                     try
                     {
                         string queryVenta = @"
-                    INSERT INTO ventas (total, fecha_venta, estado)
-                    VALUES (@total, @fecha, @estado)
+                    INSERT INTO ventas (total, fecha_venta, estado, metodo_pago)
+                    VALUES (@total, @fecha, @estado, @metodoPago)
                     RETURNING id, folio;";
 
                         using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion, transaccion))
@@ -221,6 +221,7 @@ namespace RefaccionariaPOS.Views
                             cmdVenta.Parameters.AddWithValue("@total", totalVenta);
                             cmdVenta.Parameters.AddWithValue("@fecha", DateTime.Now);
                             cmdVenta.Parameters.AddWithValue("@estado", "Completada");
+                            cmdVenta.Parameters.AddWithValue("@metodoPago", "Mostrador");
 
                             using (NpgsqlDataReader reader = cmdVenta.ExecuteReader())
                             {
@@ -361,8 +362,8 @@ namespace RefaccionariaPOS.Views
 
     public class ProductoCarrito
     {
-        public string CodigoBarras { get; set; }
-        public string Nombre { get; set; }
+        public string CodigoBarras { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
         public decimal PrecioVenta { get; set; }
         public int Cantidad { get; set; }
         public decimal Subtotal => PrecioVenta * Cantidad;

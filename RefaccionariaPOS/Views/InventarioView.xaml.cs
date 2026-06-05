@@ -48,9 +48,9 @@ namespace RefaccionariaPOS.Views
                                 Producto prod = new Producto
                                 {
                                     Id = Convert.ToInt32(reader["id"]),
-                                    CodigoBarras = reader["codigo_barras"].ToString(),
-                                    Nombre = reader["nombre"].ToString(),
-                                    Descripcion = reader["descripcion"].ToString(),
+                                    CodigoBarras = reader["codigo_barras"].ToString() ?? string.Empty,
+                                    Nombre = reader["nombre"].ToString() ?? string.Empty,
+                                    Descripcion = reader["descripcion"].ToString() ?? string.Empty,
                                     PrecioCompra = Convert.ToDecimal(reader["costo_proveedor"]),
                                     PrecioVenta = Convert.ToDecimal(reader["precio_venta"]),
                                     Stock = Convert.ToInt32(reader["stock_actual"])
@@ -97,7 +97,7 @@ namespace RefaccionariaPOS.Views
         {
             if (dgInventario.SelectedItem is Producto productoSeleccionado)
             {
-                string nuevoStockStr = PedirValor("Actualizar Stock",
+                string? nuevoStockStr = PedirValor("Actualizar Stock",
                                                   $"Ingresa el nuevo stock físico para:\n{productoSeleccionado.Nombre}",
                                                   productoSeleccionado.Stock.ToString());
 
@@ -139,7 +139,7 @@ namespace RefaccionariaPOS.Views
         // ==========================================================
         // 4. VENTANA FLOTANTE GENERADA EN CÓDIGO
         // ==========================================================
-        private string PedirValor(string titulo, string mensaje, string valorActual)
+        private string? PedirValor(string titulo, string mensaje, string valorActual)
         {
             Window ventana = new Window
             {

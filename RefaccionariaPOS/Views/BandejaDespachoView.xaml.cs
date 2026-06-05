@@ -27,11 +27,11 @@ namespace RefaccionariaPOS.Views
                 {
                     try
                     {
-                        string queryCheck = "SELECT stock_actual, precio_venta FROM productos WHERE codigo_barras = @codigo;";
+                        string queryCheck = "SELECT stock_actual, precio_venta FROM productos WHERE codigo_barras = @codigo FOR UPDATE;";
                         int stockDisponible = 0;
                         decimal precioProducto = 0;
 
-                        using (NpgsqlCommand cmdCheck = new NpgsqlCommand(queryCheck, conexion))
+                        using (NpgsqlCommand cmdCheck = new NpgsqlCommand(queryCheck, conexion, transaccion))
                         {
                             cmdCheck.Parameters.AddWithValue("@codigo", solicitud.CodigoBarras);
 
@@ -60,27 +60,41 @@ namespace RefaccionariaPOS.Views
                         }
 
                         // Cambiamos el estado en la orden a 'Surtido'
-                        string updateOrden = "UPDATE orden_refacciones SET estado_despacho = 'Surtido' WHERE id_detalle = @idDetalle;";
-                        using (NpgsqlCommand cmdOrden = new NpgsqlCommand(updateOrden, conexion))
+                        string updateOrden = @"UPDATE orden_refacciones
+                                               SET estado_despacho = 'Surtido',
+                                                   precio_cotizado = @precio
+                                               WHERE id_detalle = @idDetalle
+                                                 AND estado_despacho = 'Solicitado';";
+                        using (NpgsqlCommand cmdOrden = new NpgsqlCommand(updateOrden, conexion, transaccion))
                         {
                             cmdOrden.Parameters.AddWithValue("@idDetalle", solicitud.IdDetalle);
-                            cmdOrden.ExecuteNonQuery();
+                            cmdOrden.Parameters.AddWithValue("@precio", precioProducto);
+                            if (cmdOrden.ExecuteNonQuery() == 0)
+                            {
+                                throw new Exception("La solicitud ya fue procesada o no existe.");
+                            }
                         }
 
                         // Descontamos el stock físico
-                        string updateStock = "UPDATE productos SET stock_actual = stock_actual - @cantidad WHERE codigo_barras = @codigo;";
-                        using (NpgsqlCommand cmdStock = new NpgsqlCommand(updateStock, conexion))
+                        string updateStock = @"UPDATE productos
+                                               SET stock_actual = stock_actual - @cantidad
+                                               WHERE codigo_barras = @codigo
+                                                 AND stock_actual >= @cantidad;";
+                        using (NpgsqlCommand cmdStock = new NpgsqlCommand(updateStock, conexion, transaccion))
                         {
                             cmdStock.Parameters.AddWithValue("@cantidad", solicitud.Cantidad);
                             cmdStock.Parameters.AddWithValue("@codigo", solicitud.CodigoBarras);
-                            cmdStock.ExecuteNonQuery();
+                            if (cmdStock.ExecuteNonQuery() == 0)
+                            {
+                                throw new Exception("El stock cambió antes de completar el surtido.");
+                            }
                         }
 
                         // Registramos la venta unificada en la BD
                         decimal totalVenta = precioProducto * solicitud.Cantidad;
                         string queryVenta = @"INSERT INTO ventas (total, fecha_venta, estado, metodo_pago) 
                                               VALUES (@total, CURRENT_TIMESTAMP, 'Completada', 'Surtido Taller');";
-                        using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion))
+                        using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion, transaccion))
                         {
                             cmdVenta.Parameters.AddWithValue("@total", totalVenta);
                             cmdVenta.ExecuteNonQuery();
@@ -112,7 +126,7 @@ namespace RefaccionariaPOS.Views
                     conexion.Open();
 
                     // CORREGIDO: Traemos también el id_orden (o id_detalle si funge como identificador visual)
-                    string query = @"SELECT o.id_detalle, o.codigo_barras, o.cantidad, p.nombre 
+                    string query = @"SELECT o.id_detalle, o.id_orden, o.codigo_barras, o.cantidad, p.nombre
                                      FROM orden_refacciones o
                                      LEFT JOIN productos p ON o.codigo_barras = p.codigo_barras
                                      WHERE o.estado_despacho = 'Solicitado';";
@@ -126,10 +140,10 @@ namespace RefaccionariaPOS.Views
                                 listaSolicitudes.Add(new SolicitudDespacho
                                 {
                                     IdDetalle = Convert.ToInt32(reader["id_detalle"]),
-                                     IdOrden= Convert.ToInt32(reader["id_detalle"]), // Mapeado para que no se rompa la columna del DataGrid
-                                    CodigoBarras = reader["codigo_barras"].ToString(),
+                                    IdOrden = Convert.ToInt32(reader["id_orden"]),
+                                    CodigoBarras = reader["codigo_barras"].ToString() ?? string.Empty,
                                     Cantidad = Convert.ToInt32(reader["cantidad"]),
-                                    NombreProducto = reader["nombre"] != DBNull.Value ? reader["nombre"].ToString() : "Desconocido"
+                                    NombreProducto = reader["nombre"] != DBNull.Value ? reader["nombre"].ToString() ?? "Desconocido" : "Desconocido"
                                 });
                             }
                         }

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Historial de Ventas Realizadas"
         Height="450"
-        Width="700"
+        Width="850"
         WindowStartupLocation="CenterScreen"
         Background="#F4F6F9">
 
@@ -51,7 +51,15 @@
 
                 <DataGridTextColumn Header="Total Cobrado"
                                     Binding="{Binding Total, StringFormat={}{0:C}}"
+                                    Width="130"/>
+
+                <DataGridTextColumn Header="Origen"
+                                    Binding="{Binding Origen}"
                                     Width="150"/>
+
+                <DataGridTextColumn Header="Método / Canal"
+                                    Binding="{Binding MetodoPago}"
+                                    Width="180"/>
 
                 <DataGridTextColumn Header="Estado"
                                     Binding="{Binding Estado}"

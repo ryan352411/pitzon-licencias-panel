@@ -19,9 +19,9 @@ namespace RefaccionariaPOS.Views
         {
             string usuario = txtNuevoUsuario.Text.Trim();
             string password = txtNuevaPassword.Password.Trim();
-            string rolSeleccionado = (cmbRol.SelectedItem as ComboBoxItem)?.Content.ToString();
+            string? rolSeleccionado = (cmbRol.SelectedItem as ComboBoxItem)?.Content.ToString();
 
-            if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(rolSeleccionado))
             {
                 MessageBox.Show("Por favor, llena todos los campos para continuar.", "Campos Vacíos", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;

@@ -2,6 +2,7 @@
 using RefaccionariaPOS.Data;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks; // <-- Necesario para tareas asíncronas
 using System.Windows;
@@ -24,7 +25,7 @@ namespace RefaccionariaPOS.Views
         private string rolUsuarioActual;
 
         // Objeto de conexión dedicado exclusivamente a escuchar alertas de PostgreSQL
-        private NpgsqlConnection conexionListener;
+        private NpgsqlConnection? conexionListener;
 
         // Modificamos el constructor para recibir el rol desde el Login
         public MainView(string rol)
@@ -150,8 +151,7 @@ namespace RefaccionariaPOS.Views
             {
                 DatabaseConnection db = new DatabaseConnection();
 
-                int totalVentas = 0;
-                decimal dineroAcumuladoCaja = 0;
+                List<CorteCajaResumen> resumenes = new List<CorteCajaResumen>();
 
                 string fechaHoyTexto = DateTime.Now.ToString("yyyy-MM-dd");
 
@@ -159,9 +159,20 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    string queryCorte = @"SELECT total 
-                                          FROM ventas 
-                                          WHERE to_char(fecha_venta, 'YYYY-MM-DD') = @hoy";
+                    string queryCorte = @"
+                        SELECT
+                            CASE
+                                WHEN metodo_pago ILIKE 'Taller - Refacciones%' THEN 'Taller - Refacciones'
+                                WHEN metodo_pago ILIKE 'Taller -%' THEN 'Taller - Servicio'
+                                WHEN metodo_pago = 'Surtido Taller' THEN 'Surtido a taller'
+                                ELSE 'Mostrador'
+                            END AS origen,
+                            COUNT(*) AS tickets,
+                            COALESCE(SUM(total), 0) AS total
+                        FROM ventas
+                        WHERE to_char(fecha_venta, 'YYYY-MM-DD') = @hoy
+                        GROUP BY origen
+                        ORDER BY origen;";
 
                     using (NpgsqlCommand cmd = new NpgsqlCommand(queryCorte, conexion))
                     {
@@ -171,23 +182,39 @@ namespace RefaccionariaPOS.Views
                         {
                             while (reader.Read())
                             {
-                                totalVentas++;
-
-                                string totalTexto = reader["total"].ToString();
-                                if (decimal.TryParse(totalTexto, out decimal montoDecimal))
+                                resumenes.Add(new CorteCajaResumen
                                 {
-                                    dineroAcumuladoCaja += montoDecimal;
-                                }
+                                    Origen = reader["origen"].ToString() ?? "Sin clasificar",
+                                    Tickets = Convert.ToInt32(reader["tickets"]),
+                                    Total = Convert.ToDecimal(reader["total"])
+                                });
                             }
                         }
                     }
+                }
+
+                int totalVentas = resumenes.Sum(item => item.Tickets);
+                decimal dineroAcumuladoCaja = resumenes.Sum(item => item.Total);
+                StringBuilder detalleOrigenes = new StringBuilder();
+
+                foreach (CorteCajaResumen item in resumenes)
+                {
+                    detalleOrigenes.AppendLine($"{item.Origen}: {item.Tickets} ticket(s) | {item.Total:C}");
+                }
+
+                if (resumenes.Count == 0)
+                {
+                    detalleOrigenes.AppendLine("Sin ventas registradas hoy.");
                 }
 
                 string mensajeReporte = $"=== CORTE DE CAJA DIARIO ===\n\n" +
                                         $"Fecha: {DateTime.Now:dd/MM/yyyy}\n" +
                                         $"----------------------------------------\n" +
                                         $"Tickets Emitidos: {totalVentas}\n" +
-                                        $"Total Efectivo en Caja: {dineroAcumuladoCaja:C}\n\n" +
+                                        $"Total General: {dineroAcumuladoCaja:C}\n\n" +
+                                        $"=== DESGLOSE POR ORIGEN ===\n" +
+                                        detalleOrigenes +
+                                        $"\n" +
                                         $"¿El dinero coincide con físico?";
 
                 MessageBox.Show(mensajeReporte, "Corte de Caja Exitoso", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -208,6 +235,13 @@ namespace RefaccionariaPOS.Views
                 pantallaLogin.Show();
                 this.Close();
             }
+        }
+
+        private class CorteCajaResumen
+        {
+            public string Origen { get; set; } = string.Empty;
+            public int Tickets { get; set; }
+            public decimal Total { get; set; }
         }
     }
 }

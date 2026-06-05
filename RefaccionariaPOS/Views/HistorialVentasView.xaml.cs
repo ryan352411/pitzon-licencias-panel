@@ -31,7 +31,7 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    string query = "SELECT id, folio, fecha_venta, total, estado FROM ventas ORDER BY fecha_venta DESC";
+                    string query = "SELECT id, folio, fecha_venta, total, estado, metodo_pago FROM ventas ORDER BY fecha_venta DESC";
 
                     using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
                     using (NpgsqlDataReader reader = cmd.ExecuteReader())
@@ -44,7 +44,8 @@ namespace RefaccionariaPOS.Views
                                 Folio = Convert.ToInt32(reader["folio"]),
                                 Fecha = Convert.ToDateTime(reader["fecha_venta"]),
                                 Total = Convert.ToDecimal(reader["total"]),
-                                Estado = reader["estado"] == DBNull.Value ? "Completada" : reader["estado"].ToString()
+                                Estado = reader["estado"] == DBNull.Value ? "Completada" : reader["estado"].ToString() ?? "Completada",
+                                MetodoPago = reader["metodo_pago"] == DBNull.Value ? "Mostrador" : reader["metodo_pago"].ToString() ?? "Mostrador"
                             };
 
                             listaVentas.Add(v);
@@ -62,7 +63,7 @@ namespace RefaccionariaPOS.Views
 
         private void DgHistorial_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            DependencyObject dep = e.OriginalSource as DependencyObject;
+            DependencyObject? dep = e.OriginalSource as DependencyObject;
 
             while (dep != null && !(dep is DataGridRow))
             {
@@ -120,7 +121,7 @@ namespace RefaccionariaPOS.Views
                             {
                                 tieneArticulos = true;
 
-                                string nombreProd = reader["producto_nombre"].ToString();
+                                string nombreProd = reader["producto_nombre"].ToString() ?? string.Empty;
                                 int cantidad = Convert.ToInt32(reader["cantidad"]);
                                 decimal precioUnit = Convert.ToDecimal(reader["precio_unitario"]);
                                 decimal subtotal = Convert.ToDecimal(reader["subtotal"]);

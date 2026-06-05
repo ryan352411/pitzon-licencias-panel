@@ -54,7 +54,7 @@ namespace RefaccionariaPOS.Views
                             if (reader.Read())
                             {
                                 // Recuperamos el rol de forma segura manejando posibles nulos en BD
-                                string rolObtenido = reader["rol"] != DBNull.Value ? reader["rol"].ToString() : "Vendedor";
+                                string rolObtenido = reader["rol"] != DBNull.Value ? reader["rol"].ToString() ?? "Vendedor" : "Vendedor";
 
                                 // 3. Inicio de sesión exitoso: Redirección al módulo principal con privilegios asignados
                                 MainView mainWindow = new MainView(rolObtenido);
