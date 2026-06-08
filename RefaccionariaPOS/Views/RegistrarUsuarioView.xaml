@@ -57,12 +57,14 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Usuarios registrados" FontSize="18" FontWeight="Bold" Foreground="#1E272E"/>
-                        <Button Grid.Column="1" Content="Actualizar" Background="#2980B9" Foreground="White" Click="BtnActualizar_Click"/>
+                        <Button Grid.Column="1" Content="Eliminar usuario" Background="#E74C3C" Foreground="White" Margin="0,0,10,0" Click="BtnEliminarUsuario_Click"/>
+                        <Button Grid.Column="2" Content="Actualizar" Background="#2980B9" Foreground="White" Click="BtnActualizar_Click"/>
                     </Grid>
 
-                    <DataGrid x:Name="dgUsuarios" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                    <DataGrid x:Name="dgUsuarios" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
                             <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="*"/>

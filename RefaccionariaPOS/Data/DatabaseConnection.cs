@@ -5,11 +5,12 @@ namespace RefaccionariaPOS.Data
 {
     public class DatabaseConnection
     {
-        private const string LocalConnectionString = "Host=localhost;Username=postgres;Password=061106;Database=refaccionaria_db";
+        private const string ConnectionEnvironmentVariable = "REFACCIONARIA_DB_CONNECTION";
 
         private readonly string connectionString =
-            Environment.GetEnvironmentVariable("REFACCIONARIA_DB_CONNECTION")
-            ?? LocalConnectionString;
+            Environment.GetEnvironmentVariable(ConnectionEnvironmentVariable)
+            ?? throw new InvalidOperationException(
+                $"Configura la variable de entorno {ConnectionEnvironmentVariable} con la conexión de Supabase.");
 
         public NpgsqlConnection GetConnection()
         {

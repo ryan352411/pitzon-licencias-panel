@@ -31,7 +31,7 @@
                 <TextBlock Text="Contraseña" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
                 <PasswordBox x:Name="txtPassword" Height="42" FontSize="15" Padding="10,8" Margin="0,0,0,26" KeyDown="Credentials_KeyDown"/>
 
-                <Button Content="Entrar" Height="44" Background="#2ECC71" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" IsDefault="True" Click="BtnEntrar_Click"/>
+                <Button Content="Entrar" Height="44" Background="#2ECC71" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnEntrar_Click"/>
             </StackPanel>
         </Border>
     </Grid>

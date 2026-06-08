@@ -1,6 +1,8 @@
 using Npgsql;
 using RefaccionariaPOS.Data;
 using System;
+using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -14,6 +16,7 @@ namespace RefaccionariaPOS.Views
         private readonly int idUsuarioActual;
         private readonly string usuarioActual;
         private readonly string rolUsuarioActual;
+        private readonly CancellationTokenSource listenerCancellation = new();
         private NpgsqlConnection? conexionListener;
 
         public MainView(int idUsuario, string usuario, string rol)
@@ -47,16 +50,17 @@ namespace RefaccionariaPOS.Views
         {
             try
             {
+                CancellationToken cancellationToken = listenerCancellation.Token;
                 DatabaseConnection db = new DatabaseConnection();
                 conexionListener = db.GetConnection();
-                await conexionListener.OpenAsync();
+                await conexionListener.OpenAsync(cancellationToken);
 
                 conexionListener.Notification += (_, e) =>
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         MessageBox.Show(
-                            $"¡Nueva solicitud de refacciones del Taller!\nPor favor revisa la orden No. {e.Payload} en tu Bandeja de Despacho.",
+                            $"Nueva solicitud de refacciones del Taller.\nPor favor revisa la orden No. {e.Payload} en tu Bandeja de Despacho.",
                             "Alerta Express - Surtido Requerido",
                             MessageBoxButton.OK,
                             MessageBoxImage.Exclamation);
@@ -65,13 +69,17 @@ namespace RefaccionariaPOS.Views
 
                 using (var cmd = new NpgsqlCommand($"LISTEN {CanalAlertaDespacho};", conexionListener))
                 {
-                    await cmd.ExecuteNonQueryAsync();
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
                 }
 
-                while (true)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    await conexionListener.WaitAsync();
+                    await conexionListener.WaitAsync(cancellationToken);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // El listener se cancela al cerrar sesion o cerrar la ventana.
             }
             catch (Exception ex)
             {
@@ -83,10 +91,8 @@ namespace RefaccionariaPOS.Views
         {
             base.OnClosed(e);
 
-            if (conexionListener?.State == System.Data.ConnectionState.Open)
-            {
-                conexionListener.Dispose();
-            }
+            CerrarListenerNotificaciones();
+            listenerCancellation.Dispose();
         }
 
         private void BtnBandejaDespacho_Click(object sender, RoutedEventArgs e)
@@ -122,8 +128,8 @@ namespace RefaccionariaPOS.Views
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
         {
             MessageBoxResult resultado = MessageBox.Show(
-                "¿Seguro que deseas cerrar la sesión actual?",
-                "Cerrar Sesión",
+                "Seguro que deseas cerrar la sesion actual?",
+                "Cerrar Sesion",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -132,9 +138,25 @@ namespace RefaccionariaPOS.Views
                 return;
             }
 
+            CerrarListenerNotificaciones();
+
             LoginView pantallaLogin = new LoginView();
+            Application.Current.MainWindow = pantallaLogin;
             pantallaLogin.Show();
             Close();
+        }
+
+        private void CerrarListenerNotificaciones()
+        {
+            if (!listenerCancellation.IsCancellationRequested)
+            {
+                listenerCancellation.Cancel();
+            }
+
+            if (conexionListener?.State == ConnectionState.Open)
+            {
+                conexionListener.Dispose();
+            }
         }
 
         private bool EsVendedorExacto()

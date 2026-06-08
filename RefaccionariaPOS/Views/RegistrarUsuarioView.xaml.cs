@@ -75,6 +75,86 @@ namespace RefaccionariaPOS.Views
             CargarUsuarios();
         }
 
+        private void BtnEliminarUsuario_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgUsuarios.SelectedItem is not UsuarioSistema usuario)
+            {
+                MessageBox.Show("Selecciona un usuario de la tabla.", "Sin seleccion", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBoxResult confirmacion = MessageBox.Show(
+                $"Seguro que deseas eliminar al usuario '{usuario.Username}'?",
+                "Eliminar usuario",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (confirmacion != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    using (NpgsqlTransaction transaction = conexion.BeginTransaction())
+                    {
+                        if (usuario.Rol.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) && ObtenerTotalSuperAdmins(conexion, transaction) <= 1)
+                        {
+                            MessageBox.Show("No puedes eliminar el ultimo usuario SuperAdmin.", "Accion no permitida", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        if (UsuarioTieneHistorial(conexion, transaction, usuario.Id))
+                        {
+                            MessageBox.Show("No se puede eliminar porque el usuario ya tiene ventas o movimientos registrados.", "Historial protegido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        using (NpgsqlCommand cmd = new NpgsqlCommand("DELETE FROM usuarios WHERE id = @id", conexion, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@id", usuario.Id);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                }
+
+                MessageBox.Show("Usuario eliminado correctamente.", "Listo", MessageBoxButton.OK, MessageBoxImage.Information);
+                CargarUsuarios();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al eliminar usuario: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static int ObtenerTotalSuperAdmins(NpgsqlConnection conexion, NpgsqlTransaction transaction)
+        {
+            using (NpgsqlCommand cmd = new NpgsqlCommand("SELECT COUNT(*) FROM usuarios WHERE rol ILIKE 'SuperAdmin'", conexion, transaction))
+            {
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+        }
+
+        private static bool UsuarioTieneHistorial(NpgsqlConnection conexion, NpgsqlTransaction transaction, int usuarioId)
+        {
+            const string query = @"
+                SELECT
+                    (SELECT COUNT(*) FROM ventas WHERE usuario_id = @id) +
+                    (SELECT COUNT(*) FROM movimientos_inventario WHERE usuario_id = @id);";
+
+            using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion, transaction))
+            {
+                cmd.Parameters.AddWithValue("@id", usuarioId);
+                return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+            }
+        }
+
         private void CargarUsuarios()
         {
             List<UsuarioSistema> usuarios = new List<UsuarioSistema>();

@@ -9,6 +9,8 @@ namespace RefaccionariaPOS.Views
 {
     public partial class LoginView : Window
     {
+        private bool iniciandoSesion;
+
         public LoginView()
         {
             InitializeComponent();
@@ -16,14 +18,26 @@ namespace RefaccionariaPOS.Views
 
         private void BtnEntrar_Click(object sender, RoutedEventArgs e)
         {
+            IniciarSesion();
+        }
+
+        private void IniciarSesion()
+        {
             string usuario = txtUsuario.Text.Trim();
             string password = txtPassword.Password.Trim();
 
             if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Por favor, ingresa tu usuario y contraseña.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, ingresa tu usuario y contrasena.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            if (iniciandoSesion)
+            {
+                return;
+            }
+
+            iniciandoSesion = true;
 
             try
             {
@@ -32,7 +46,7 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    string query = "SELECT id, username, rol, password_hash FROM usuarios WHERE username ILIKE @user LIMIT 1";
+                    const string query = "SELECT id, username, rol, password_hash FROM usuarios WHERE username ILIKE @user LIMIT 1";
                     using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
                     {
                         cmd.Parameters.AddWithValue("@user", usuario);
@@ -43,15 +57,18 @@ namespace RefaccionariaPOS.Views
                             {
                                 int idUsuario = Convert.ToInt32(reader["id"]);
                                 string username = reader["username"].ToString() ?? usuario;
-                                string rolObtenido = reader["rol"] != DBNull.Value ? reader["rol"].ToString() ?? "Vendedor" : "Vendedor";
+                                string rolObtenido = reader["rol"] != DBNull.Value
+                                    ? reader["rol"].ToString() ?? "Vendedor"
+                                    : "Vendedor";
 
                                 MainView mainWindow = new MainView(idUsuario, username, rolObtenido);
+                                Application.Current.MainWindow = mainWindow;
                                 mainWindow.Show();
                                 Close();
                             }
                             else
                             {
-                                MessageBox.Show("Usuario o contraseña incorrectos.", "Error de Acceso", MessageBoxButton.OK, MessageBoxImage.Error);
+                                MessageBox.Show("Usuario o contrasena incorrectos.", "Error de Acceso", MessageBoxButton.OK, MessageBoxImage.Error);
                             }
                         }
                     }
@@ -59,7 +76,11 @@ namespace RefaccionariaPOS.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("No se pudo establecer comunicación con el servidor de datos: " + ex.Message, "Error del Sistema", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("No se pudo establecer comunicacion con el servidor de datos: " + ex.Message, "Error del Sistema", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                iniciandoSesion = false;
             }
         }
 
@@ -71,7 +92,7 @@ namespace RefaccionariaPOS.Views
             }
 
             e.Handled = true;
-            BtnEntrar_Click(sender, new RoutedEventArgs());
+            IniciarSesion();
         }
     }
 }

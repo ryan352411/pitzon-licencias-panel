@@ -1,4 +1,3 @@
-﻿using System;
 using System.Windows;
 using RefaccionariaPOS.Views;
 
@@ -10,8 +9,8 @@ namespace RefaccionariaPOS
         {
             base.OnStartup(e);
 
-            // Forzamos a que la PRIMERA ventana en abrirse sea el Login real
             LoginView pantallaLogin = new LoginView();
+            MainWindow = pantallaLogin;
             pantallaLogin.Show();
         }
     }
