@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Input;
 using Npgsql;
 using RefaccionariaPOS.Data;
 using RefaccionariaPOS.Security;
@@ -60,6 +61,17 @@ namespace RefaccionariaPOS.Views
             {
                 MessageBox.Show("No se pudo establecer comunicación con el servidor de datos: " + ex.Message, "Error del Sistema", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void Credentials_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            BtnEntrar_Click(sender, new RoutedEventArgs());
         }
     }
 }

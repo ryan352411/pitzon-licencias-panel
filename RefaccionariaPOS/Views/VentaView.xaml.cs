@@ -425,7 +425,7 @@ namespace RefaccionariaPOS.Views
             List<string> lineas = new List<string>
             {
                 "========================================",
-                "        REFACCIONARIA POS v1.0          ",
+                "        PITZÓN POS v1.0                ",
                 "========================================",
                 $"Folio No:  {folio}",
                 $"Fecha:     {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
@@ -528,7 +528,7 @@ namespace RefaccionariaPOS.Views
                 ImprimirTicket(new List<string>
                 {
                     "========================================",
-                    "        PRUEBA DE IMPRESORA POS         ",
+                    "        PRUEBA DE IMPRESORA PITZÓN      ",
                     "========================================",
                     $"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
                     "Impresora lista para tickets.",

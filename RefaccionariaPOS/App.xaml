@@ -5,6 +5,7 @@
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Icon" Value="pack://application:,,,/Assets/AppIcon.ico"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="MinHeight" Value="36"/>

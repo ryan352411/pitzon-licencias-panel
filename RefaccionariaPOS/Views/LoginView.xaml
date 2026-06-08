@@ -1,7 +1,7 @@
 ﻿<Window x:Class="RefaccionariaPOS.Views.LoginView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Acceso - Refaccionaria" Height="560" Width="920"
+        Title="Acceso - PITZÓN" Height="560" Width="920"
         MinHeight="520" MinWidth="820"
         WindowStartupLocation="CenterScreen" Background="#F3F5F8">
 
@@ -13,7 +13,7 @@
 
         <Border Grid.Column="0" Background="#14213D" Padding="42">
             <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="Refaccionaria POS" FontSize="34" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="PITZÓN" FontSize="34" FontWeight="Bold" Foreground="White"/>
                 <TextBlock Text="Ventas, inventario, despacho y corte de caja conectados a Supabase." FontSize="16" Foreground="#B8C4D6" Margin="0,14,0,0" TextWrapping="Wrap"/>
                 <Border Width="72" Height="4" Background="#2ECC71" HorizontalAlignment="Left" Margin="0,28,0,28"/>
                 <TextBlock Text="Acceso para usuarios autorizados." FontSize="14" Foreground="#E2E8F0"/>
@@ -26,12 +26,12 @@
                 <TextBlock Text="Usa tus credenciales registradas." FontSize="14" Foreground="#6B7785" Margin="0,8,0,30"/>
 
                 <TextBlock Text="Usuario" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                <TextBox x:Name="txtUsuario" Height="42" FontSize="15" Padding="10,8" Margin="0,0,0,18"/>
+                <TextBox x:Name="txtUsuario" Height="42" FontSize="15" Padding="10,8" Margin="0,0,0,18" KeyDown="Credentials_KeyDown"/>
 
                 <TextBlock Text="Contraseña" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
-                <PasswordBox x:Name="txtPassword" Height="42" FontSize="15" Padding="10,8" Margin="0,0,0,26"/>
+                <PasswordBox x:Name="txtPassword" Height="42" FontSize="15" Padding="10,8" Margin="0,0,0,26" KeyDown="Credentials_KeyDown"/>
 
-                <Button Content="Entrar" Height="44" Background="#2ECC71" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnEntrar_Click"/>
+                <Button Content="Entrar" Height="44" Background="#2ECC71" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" IsDefault="True" Click="BtnEntrar_Click"/>
             </StackPanel>
         </Border>
     </Grid>
