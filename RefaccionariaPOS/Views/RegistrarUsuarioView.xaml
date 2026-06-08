@@ -1,35 +1,77 @@
-﻿<Window x:Class="RefaccionariaPOS.Views.RegistrarUsuarioView"
+<Window x:Class="RefaccionariaPOS.Views.RegistrarUsuarioView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Alta de Personal" Height="420" Width="400"
-        WindowStartupLocation="CenterScreen" Background="#F1F2F6" ResizeMode="NoResize">
+        Title="Gestión de Personal"
+        Height="620"
+        Width="980"
+        MinHeight="560"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F3F5F8">
 
-    <Grid Margin="25">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="👥 Registro de Personal" FontSize="22" FontWeight="Bold" Foreground="#2C3E50"/>
-            <TextBlock Text="Da de alta nuevos Super Administradores o Vendedores." FontSize="12" Foreground="#7F8C8D"/>
+            <TextBlock Text="Gestión de Personal" FontSize="28" FontWeight="Bold" Foreground="#1E272E"/>
+            <TextBlock Text="Alta de usuarios y consulta de accesos registrados." FontSize="14" Foreground="#64748B" Margin="0,6,0,0"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="1" VerticalAlignment="Top">
-            <TextBlock Text="Nombre de Usuario:" FontSize="14" FontWeight="SemiBold" Foreground="#34495E" Margin="0,5"/>
-            <TextBox x:Name="txtNuevoUsuario" Height="35" FontSize="14" Padding="5,7,5,5" Margin="0,0,0,15"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <TextBlock Text="Contraseña de Acceso:" FontSize="14" FontWeight="SemiBold" Foreground="#34495E" Margin="0,5"/>
-            <PasswordBox x:Name="txtNuevaPassword" Height="35" FontSize="14" Padding="5,7,5,5" Margin="0,0,0,15"/>
+            <Border Grid.Column="0" Background="White" CornerRadius="8" Padding="20" Margin="0,0,18,0">
+                <StackPanel>
+                    <TextBlock Text="Nuevo usuario" FontSize="18" FontWeight="Bold" Foreground="#1E272E" Margin="0,0,0,18"/>
 
-            <TextBlock Text="Asignar Rol del Sistema:" FontSize="14" FontWeight="SemiBold" Foreground="#34495E" Margin="0,5"/>
-            <ComboBox x:Name="cmbRol" Height="35" FontSize="14" SelectedIndex="0">
-                <ComboBoxItem Content="Vendedor"/>
-                <ComboBoxItem Content="SuperAdmin"/>
-            </ComboBox>
-        </StackPanel>
+                    <TextBlock Text="Nombre de usuario" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                    <TextBox x:Name="txtNuevoUsuario" Margin="0,0,0,16"/>
 
-        <Button Grid.Row="2" Content="💾 Guardar Usuario" Height="40" Background="#2ECC71" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnGuardarUsuario_Click"/>
+                    <TextBlock Text="Contraseña" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                    <PasswordBox x:Name="txtNuevaPassword" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Rol" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="cmbRol" SelectedIndex="0" Margin="0,0,0,22">
+                        <ComboBoxItem Content="Vendedor"/>
+                        <ComboBoxItem Content="SuperAdmin"/>
+                    </ComboBox>
+
+                    <Button Content="Guardar Usuario" Height="42" Background="#2ECC71" Foreground="White" Click="BtnGuardarUsuario_Click"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Usuarios registrados" FontSize="18" FontWeight="Bold" Foreground="#1E272E"/>
+                        <Button Grid.Column="1" Content="Actualizar" Background="#2980B9" Foreground="White" Click="BtnActualizar_Click"/>
+                    </Grid>
+
+                    <DataGrid x:Name="dgUsuarios" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
+                            <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="*"/>
+                            <DataGridTextColumn Header="Rol" Binding="{Binding Rol}" Width="150"/>
+                            <DataGridTextColumn Header="Fecha de alta" Binding="{Binding FechaAlta, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="190"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

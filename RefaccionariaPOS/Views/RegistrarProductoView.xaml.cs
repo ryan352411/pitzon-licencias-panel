@@ -1,5 +1,7 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Input;
 using Npgsql;
 using RefaccionariaPOS.Data;
 
@@ -7,47 +9,71 @@ namespace RefaccionariaPOS.Views
 {
     public partial class RegistrarProductoView : Window
     {
+        private int? productoExistenteId;
+        private string ultimoCodigoConsultado = string.Empty;
+
         public RegistrarProductoView()
         {
             InitializeComponent();
+            VerificarColumnasInventario();
+            CargarCategorias();
+            Loaded += (_, _) => txtCodigo.Focus();
         }
 
         private void BtnGuardar_Click(object sender, RoutedEventArgs e)
         {
-            // Validar que los campos obligatorios no estén vacíos
             if (string.IsNullOrWhiteSpace(txtCodigo.Text) || string.IsNullOrWhiteSpace(txtNombre.Text))
             {
-                MessageBox.Show("Por favor, llena el Código y el Nombre.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, llena el código y el nombre.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!decimal.TryParse(txtCosto.Text, out decimal costo) || costo < 0)
+            {
+                MessageBox.Show("Ingresa un costo válido.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!decimal.TryParse(txtPrecioVenta.Text, out decimal precioVenta) || precioVenta < 0)
+            {
+                MessageBox.Show("Ingresa un precio de venta válido.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!int.TryParse(txtStockMinimo.Text, out int stockMinimo) || stockMinimo < 0)
+            {
+                MessageBox.Show("Ingresa un stock mínimo válido.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!int.TryParse(txtStock.Text, out int stock) || stock < 0)
+            {
+                MessageBox.Show(productoExistenteId.HasValue
+                    ? "Ingresa cuántas piezas vas a agregar al inventario."
+                    : "Ingresa el stock inicial del producto.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                DatabaseConnection db = new DatabaseConnection();
-                using (NpgsqlConnection conexion = db.GetConnection())
+                if (productoExistenteId.HasValue)
                 {
-                    conexion.Open();
-
-                    // SQL adaptado a tus columnas exactas
-                    string query = @"INSERT INTO productos (codigo_barras, nombre, descripcion, costo_proveedor, precio_venta, stock_actual) 
-                                     VALUES (@codigo, @nombre, @desc, @costo, @venta, @stock)";
-
-                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
-                    {
-                        cmd.Parameters.AddWithValue("@codigo", txtCodigo.Text);
-                        cmd.Parameters.AddWithValue("@nombre", txtNombre.Text);
-                        cmd.Parameters.AddWithValue("@desc", txtDescripcion.Text);
-                        cmd.Parameters.AddWithValue("@costo", Convert.ToDecimal(txtCosto.Text));
-                        cmd.Parameters.AddWithValue("@venta", Convert.ToDecimal(txtPrecioVenta.Text));
-                        cmd.Parameters.AddWithValue("@stock", Convert.ToInt32(txtStock.Text));
-
-                        cmd.ExecuteNonQuery();
-                    }
+                    ActualizarProductoExistente(productoExistenteId.Value, costo, precioVenta, stockMinimo, stock);
+                    MessageBox.Show("Producto actualizado y stock agregado correctamente.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    InsertarProductoNuevo(costo, precioVenta, stockMinimo, stock);
+                    MessageBox.Show("Producto registrado con éxito.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
 
-                MessageBox.Show("Producto registrado con éxito.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                this.DialogResult = true; // Indica que se guardó correctamente
-                this.Close();
+                DialogResult = true;
+                Close();
+            }
+            catch (PostgresException ex) when (ex.SqlState == "23505")
+            {
+                MessageBox.Show("Ese código de barras ya existe. Escanéalo de nuevo para cargar sus datos y agregar stock.", "Producto existente", MessageBoxButton.OK, MessageBoxImage.Warning);
+                BuscarProductoExistente(force: true);
             }
             catch (Exception ex)
             {
@@ -55,9 +81,231 @@ namespace RefaccionariaPOS.Views
             }
         }
 
+        private void InsertarProductoNuevo(decimal costo, decimal precioVenta, int stockMinimo, int stock)
+        {
+            DatabaseConnection db = new DatabaseConnection();
+            using (NpgsqlConnection conexion = db.GetConnection())
+            {
+                conexion.Open();
+                string query = @"INSERT INTO productos
+                                 (codigo_barras, nombre, descripcion, costo_proveedor, precio_venta, stock_actual, stock_minimo, categoria)
+                                 VALUES (@codigo, @nombre, @desc, @costo, @venta, @stock, @stockMinimo, @categoria);";
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                {
+                    AgregarParametrosProducto(cmd, costo, precioVenta, stockMinimo);
+                    cmd.Parameters.AddWithValue("@stock", stock);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private void ActualizarProductoExistente(int idProducto, decimal costo, decimal precioVenta, int stockMinimo, int stockAgregar)
+        {
+            DatabaseConnection db = new DatabaseConnection();
+            using (NpgsqlConnection conexion = db.GetConnection())
+            {
+                conexion.Open();
+                string query = @"UPDATE productos
+                                 SET nombre = @nombre,
+                                     descripcion = @desc,
+                                     costo_proveedor = @costo,
+                                     precio_venta = @venta,
+                                     stock_minimo = @stockMinimo,
+                                     categoria = @categoria,
+                                     stock_actual = stock_actual + @stockAgregar
+                                 WHERE id = @id;";
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                {
+                    AgregarParametrosProducto(cmd, costo, precioVenta, stockMinimo);
+                    cmd.Parameters.AddWithValue("@stockAgregar", stockAgregar);
+                    cmd.Parameters.AddWithValue("@id", idProducto);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private void AgregarParametrosProducto(NpgsqlCommand cmd, decimal costo, decimal precioVenta, int stockMinimo)
+        {
+            cmd.Parameters.AddWithValue("@codigo", txtCodigo.Text.Trim());
+            cmd.Parameters.AddWithValue("@nombre", txtNombre.Text.Trim());
+            cmd.Parameters.AddWithValue("@desc", txtDescripcion.Text.Trim());
+            cmd.Parameters.AddWithValue("@costo", costo);
+            cmd.Parameters.AddWithValue("@venta", precioVenta);
+            cmd.Parameters.AddWithValue("@stockMinimo", stockMinimo);
+            cmd.Parameters.AddWithValue("@categoria", ObtenerCategoria());
+        }
+
+        private void TxtCodigo_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                BuscarProductoExistente(force: true);
+            }
+        }
+
+        private void TxtCodigo_LostFocus(object sender, RoutedEventArgs e)
+        {
+            BuscarProductoExistente(force: false);
+        }
+
+        private void BuscarProductoExistente(bool force)
+        {
+            string codigo = txtCodigo.Text.Trim();
+            if (string.IsNullOrWhiteSpace(codigo))
+            {
+                ReiniciarModoNuevo();
+                return;
+            }
+
+            if (!force && codigo == ultimoCodigoConsultado)
+            {
+                return;
+            }
+
+            ultimoCodigoConsultado = codigo;
+
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    string query = @"SELECT id, nombre, descripcion, costo_proveedor, precio_venta, stock_minimo, categoria
+                                     FROM productos
+                                     WHERE codigo_barras = @codigo
+                                     LIMIT 1;";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    {
+                        cmd.Parameters.AddWithValue("@codigo", codigo);
+
+                        using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (!reader.Read())
+                            {
+                                ReiniciarModoNuevo();
+                                return;
+                            }
+
+                            productoExistenteId = Convert.ToInt32(reader["id"]);
+                            txtNombre.Text = reader["nombre"].ToString() ?? string.Empty;
+                            txtDescripcion.Text = reader["descripcion"].ToString() ?? string.Empty;
+                            txtCosto.Text = Convert.ToDecimal(reader["costo_proveedor"]).ToString("0.##");
+                            txtPrecioVenta.Text = Convert.ToDecimal(reader["precio_venta"]).ToString("0.##");
+                            txtStockMinimo.Text = Convert.ToInt32(reader["stock_minimo"]).ToString();
+                            cmbCategoria.Text = reader["categoria"].ToString() ?? "General";
+                            txtStock.Clear();
+
+                            lblModo.Text = "PRODUCTO EXISTENTE";
+                            lblModo.Foreground = System.Windows.Media.Brushes.DarkOrange;
+                            lblStockCaption.Text = "Stock a Agregar:";
+                            btnGuardar.Content = "Actualizar Stock";
+                            txtStock.Focus();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo buscar el código de barras: " + ex.Message, "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void ReiniciarModoNuevo()
+        {
+            productoExistenteId = null;
+            lblModo.Text = "NUEVO PRODUCTO";
+            lblModo.Foreground = System.Windows.Media.Brushes.DarkSlateGray;
+            lblStockCaption.Text = "Stock Inicial:";
+            btnGuardar.Content = "Guardar";
+        }
+
+        private void CargarCategorias()
+        {
+            List<string> categorias = new List<string>
+            {
+                "General",
+                "Motor",
+                "Frenos",
+                "Suspension",
+                "Electrico",
+                "Aceites",
+                "Transmision",
+                "Direccion"
+            };
+
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    string query = "SELECT DISTINCT categoria FROM productos WHERE categoria IS NOT NULL AND categoria <> '' ORDER BY categoria;";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string categoria = reader["categoria"].ToString() ?? "General";
+                            if (!categorias.Contains(categoria))
+                            {
+                                categorias.Add(categoria);
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            cmbCategoria.ItemsSource = categorias;
+            cmbCategoria.Text = "General";
+        }
+
+        private string ObtenerCategoria()
+        {
+            string categoria = cmbCategoria.Text.Trim();
+            return string.IsNullOrWhiteSpace(categoria) ? "General" : categoria;
+        }
+
+        private void VerificarColumnasInventario()
+        {
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    string query = @"SELECT COUNT(*)
+                                     FROM information_schema.columns
+                                     WHERE table_schema = 'public'
+                                       AND table_name = 'productos'
+                                       AND column_name IN ('stock_minimo', 'categoria');";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    {
+                        int columnas = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (columnas < 2)
+                        {
+                            MessageBox.Show("Faltan las columnas categoria o stock_minimo en productos. Ejecuta la migración de inventario antes de registrar productos.", "Producto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo verificar la estructura de inventario: " + ex.Message, "Producto", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private void BtnCancelar_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
+            Close();
         }
     }
 }

@@ -10,6 +10,7 @@ namespace RefaccionariaPOS.Models
         public decimal Total { get; set; }
         public string Estado { get; set; } = string.Empty;
         public string MetodoPago { get; set; } = string.Empty;
+        public string Vendedor { get; set; } = string.Empty;
         public string Origen
         {
             get

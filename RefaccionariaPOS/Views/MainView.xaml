@@ -10,7 +10,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#2C3E50" Padding="15">
+        <Border Grid.Column="0" Background="#14213D" Padding="18">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -18,28 +18,28 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Margin="0,10,0,40" HorizontalAlignment="Center">
-                    <TextBlock Text="🛠️ REFACCIONARIA" FontSize="22" FontWeight="Black" Foreground="White" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Punto de Venta v1.0" FontSize="12" Foreground="#BDC3C7" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                <StackPanel Grid.Row="0" Margin="0,10,0,34">
+                    <TextBlock Text="REFACCIONARIA" FontSize="24" FontWeight="Black" Foreground="White"/>
+                    <TextBlock Text="Punto de venta" FontSize="12" Foreground="#B8C4D6" Margin="0,4,0,0"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" VerticalAlignment="Top">
-                    <Button x:Name="btnVenta" Content="🛒   Punto de Venta" Height="45" Margin="0,5" Background="#34495E" Foreground="White" FontSize="15" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="BtnVenta_Click"/>
+                    <Button x:Name="btnVenta" Content="Punto de Venta" Height="44" Margin="0,5" Background="#2ECC71" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnVenta_Click"/>
 
-                    <Button x:Name="btnBandejaDespacho" Content="🛎️   Bandeja de Despacho" Height="45" Margin="0,5" Background="#D35400" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnBandejaDespacho_Click"/>
+                    <Button x:Name="btnBandejaDespacho" Content="Bandeja de Despacho" Height="44" Margin="0,5" Background="#F39C12" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnBandejaDespacho_Click"/>
 
-                    <Button x:Name="btnInventario" Content="📦   Inventario / Catálogo" Height="45" Margin="0,5" Background="#34495E" Foreground="White" FontSize="15" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="BtnInventario_Click"/>
-                    <Button x:Name="btnHistorial" Content="⚙️   Historial de Ventas" Height="45" Margin="0,5" Background="#34495E" Foreground="White" FontSize="15" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="BtnHistorial_Click"/>
-                    <Button x:Name="btnCorteCaja" Content="📊   Corte de Caja" Height="45" Margin="0,5" Background="#2980B9" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnCorteCaja_Click"/>
-                    <Button x:Name="btnUsuarios" Content="👥   Gestionar Personal" Height="45" Margin="0,5" Background="#8E44AD" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnUsuarios_Click"/>
+                    <Button x:Name="btnInventario" Content="Inventario / Catálogo" Height="44" Margin="0,5" Background="#243B55" Foreground="White" FontSize="15" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="BtnInventario_Click"/>
+                    <Button x:Name="btnHistorial" Content="Historial de Ventas" Height="44" Margin="0,5" Background="#243B55" Foreground="White" FontSize="15" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="BtnHistorial_Click"/>
+                    <Button x:Name="btnCorteCaja" Content="Corte de Caja" Height="44" Margin="0,5" Background="#2980B9" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnCorteCaja_Click"/>
+                    <Button x:Name="btnUsuarios" Content="Gestionar Personal" Height="44" Margin="0,5" Background="#6C5CE7" Foreground="White" FontSize="15" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnUsuarios_Click"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,10">
-                    <Separator Background="#7F8C8D" Margin="0,0,0,15"/>
-                    <TextBlock Text="Usuario Activo:" FontSize="11" Foreground="#95A5A6"/>
+                    <Separator Background="#34495E" Margin="0,0,0,15"/>
+                    <TextBlock Text="Rol activo" FontSize="11" Foreground="#B8C4D6"/>
                     <TextBlock x:Name="lblRolVisual" Text="Cargando..." FontSize="14" FontWeight="Bold" Foreground="#2ECC71" Margin="0,0,0,10"/>
 
-                    <Button x:Name="btnCerrarSesion" Content="🚪   Cerrar Sesión" Height="35" Background="#C0392B" Foreground="White" FontSize="13" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnCerrarSesion_Click"/>
+                    <Button x:Name="btnCerrarSesion" Content="Cerrar Sesión" Height="36" Background="#E74C3C" Foreground="White" FontSize="13" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnCerrarSesion_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -51,21 +51,21 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0,10,0,0">
-                <TextBlock Text="¡Hola de nuevo!" FontSize="28" FontWeight="Bold" Foreground="#2C3E50"/>
-                <TextBlock x:Name="lblSubtitulo" Text="Selecciona una opción en el menú izquierdo para empezar a trabajar." FontSize="14" Foreground="#7F8C8D" Margin="0,5,0,0"/>
+                <TextBlock Text="Panel de operación" FontSize="30" FontWeight="Bold" Foreground="#1E272E"/>
+                <TextBlock x:Name="lblSubtitulo" Text="Selecciona una opción del menú para empezar." FontSize="14" Foreground="#6B7785" Margin="0,8,0,0"/>
             </StackPanel>
 
             <UniformGrid Grid.Row="1" Columns="2" Margin="0,30,0,0" VerticalAlignment="Top" Height="150">
-                <Border Background="White" CornerRadius="10" Margin="10" Padding="20">
+                <Border Background="White" CornerRadius="8" Margin="10" Padding="20">
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="⚡ Acceso Rápido" FontSize="16" FontWeight="Bold" Foreground="#2C3E50"/>
+                        <TextBlock Text="Acceso rápido" FontSize="16" FontWeight="Bold" Foreground="#1E272E"/>
                         <TextBlock Text="El escáner de barras está activo en la caja de cobro." FontSize="13" Foreground="#7F8C8D" Margin="0,5,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="White" CornerRadius="10" Margin="10" Padding="20">
+                <Border Background="White" CornerRadius="8" Margin="10" Padding="20">
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="🔒 Base de Datos" FontSize="16" FontWeight="Bold" Foreground="#2C3E50"/>
+                        <TextBlock Text="Base de datos" FontSize="16" FontWeight="Bold" Foreground="#1E272E"/>
                         <TextBlock Text="Conexión en tiempo real con PostgreSQL establecida correctamente." FontSize="13" Foreground="#7F8C8D" Margin="0,5,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>

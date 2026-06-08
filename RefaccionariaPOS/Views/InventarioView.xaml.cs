@@ -1,25 +1,29 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Controls; // Agregado para el TextChangedEventArgs
+using System.Windows.Controls;
 using Npgsql;
-using RefaccionariaPOS.Data;    // Para conectar a la BD
-using RefaccionariaPOS.Models;  // Para usar nuestra clase Producto
+using RefaccionariaPOS.Data;
+using RefaccionariaPOS.Models;
 
 namespace RefaccionariaPOS.Views
 {
     public partial class InventarioView : Window
     {
+        private readonly ObservableCollection<string> categorias = new ObservableCollection<string>();
+        private bool filtrosListos;
+
         public InventarioView()
         {
             InitializeComponent();
-            // Le decimos que cargue los productos en cuanto la ventana se abra
+            VerificarColumnasInventario();
+            cmbCategoria.ItemsSource = categorias;
+            CargarCategorias();
             CargarProductos();
+            filtrosListos = true;
         }
 
-        // ==========================================================
-        // 1. MÉTODO DE CARGA UNIFICADO CON EL BUSCADOR
-        // ==========================================================
         private void CargarProductos(string terminoBusqueda = "")
         {
             List<Producto> listaProductos = new List<Producto>();
@@ -31,31 +35,39 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    // Consulta combinada: trae tus datos originales pero filtra si hay texto
-                    string query = @"SELECT id, codigo_barras, nombre, descripcion, costo_proveedor, precio_venta, stock_actual 
-                                     FROM productos 
-                                     WHERE nombre ILIKE @busqueda OR codigo_barras ILIKE @busqueda
+                    string categoriaSeleccionada = cmbCategoria.SelectedItem?.ToString() ?? "Todas";
+                    bool soloBajoStock = chkBajoStock.IsChecked == true;
+
+                    string query = @"SELECT id, codigo_barras, nombre, descripcion, costo_proveedor, precio_venta,
+                                            stock_actual, stock_minimo, categoria
+                                     FROM productos
+                                     WHERE (nombre ILIKE @busqueda OR codigo_barras ILIKE @busqueda OR descripcion ILIKE @busqueda)
+                                       AND (@categoria = 'Todas' OR categoria = @categoria)
+                                       AND (@soloBajoStock = false OR stock_actual <= stock_minimo)
                                      ORDER BY nombre ASC;";
 
                     using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
                     {
                         cmd.Parameters.AddWithValue("@busqueda", "%" + terminoBusqueda + "%");
+                        cmd.Parameters.AddWithValue("@categoria", categoriaSeleccionada);
+                        cmd.Parameters.AddWithValue("@soloBajoStock", soloBajoStock);
 
                         using (NpgsqlDataReader reader = cmd.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                Producto prod = new Producto
+                                listaProductos.Add(new Producto
                                 {
                                     Id = Convert.ToInt32(reader["id"]),
                                     CodigoBarras = reader["codigo_barras"].ToString() ?? string.Empty,
                                     Nombre = reader["nombre"].ToString() ?? string.Empty,
                                     Descripcion = reader["descripcion"].ToString() ?? string.Empty,
+                                    Categoria = reader["categoria"].ToString() ?? "General",
                                     PrecioCompra = Convert.ToDecimal(reader["costo_proveedor"]),
                                     PrecioVenta = Convert.ToDecimal(reader["precio_venta"]),
-                                    Stock = Convert.ToInt32(reader["stock_actual"])
-                                };
-                                listaProductos.Add(prod);
+                                    Stock = Convert.ToInt32(reader["stock_actual"]),
+                                    StockMinimo = Convert.ToInt32(reader["stock_minimo"])
+                                });
                             }
                         }
                     }
@@ -72,27 +84,41 @@ namespace RefaccionariaPOS.Views
         private void BtnNuevo_Click(object sender, RoutedEventArgs e)
         {
             RegistrarProductoView frm = new RegistrarProductoView();
-            frm.Owner = this; // Vincula la ventana flotante con el catálogo
+            frm.Owner = this;
 
-            // Si el formulario se cerró tras guardar con éxito (DialogResult = true)
             if (frm.ShowDialog() == true)
             {
-                // Recargamos manteniendo lo que esté escrito en el buscador
+                CargarCategorias();
                 CargarProductos(txtBuscar.Text.Trim());
             }
         }
 
-        // ==========================================================
-        // 2. EVENTO DEL BUSCADOR EN TIEMPO REAL
-        // ==========================================================
         private void TxtBuscar_TextChanged(object sender, TextChangedEventArgs e)
         {
             CargarProductos(txtBuscar.Text.Trim());
         }
 
-        // ==========================================================
-        // 3. EVENTOS Y LÓGICA DE ACTUALIZACIÓN DE STOCK (CLIC DERECHO)
-        // ==========================================================
+        private void CmbCategoria_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (filtrosListos)
+            {
+                CargarProductos(txtBuscar.Text.Trim());
+            }
+        }
+
+        private void ChkBajoStock_Click(object sender, RoutedEventArgs e)
+        {
+            CargarProductos(txtBuscar.Text.Trim());
+        }
+
+        private void BtnLimpiarFiltros_Click(object sender, RoutedEventArgs e)
+        {
+            txtBuscar.Clear();
+            cmbCategoria.SelectedIndex = 0;
+            chkBajoStock.IsChecked = false;
+            CargarProductos();
+        }
+
         private void MenuActualizarStock_Click(object sender, RoutedEventArgs e)
         {
             if (dgInventario.SelectedItem is Producto productoSeleccionado)
@@ -104,7 +130,7 @@ namespace RefaccionariaPOS.Views
                 if (int.TryParse(nuevoStockStr, out int nuevoStock) && nuevoStock >= 0)
                 {
                     ActualizarStockEnBaseDeDatos(productoSeleccionado.CodigoBarras, nuevoStock);
-                    CargarProductos(txtBuscar.Text.Trim()); // Recargamos para reflejar cambios
+                    CargarProductos(txtBuscar.Text.Trim());
                 }
                 else if (nuevoStockStr != null)
                 {
@@ -136,9 +162,71 @@ namespace RefaccionariaPOS.Views
             }
         }
 
-        // ==========================================================
-        // 4. VENTANA FLOTANTE GENERADA EN CÓDIGO
-        // ==========================================================
+        private void CargarCategorias()
+        {
+            string categoriaActual = cmbCategoria.SelectedItem?.ToString() ?? "Todas";
+            categorias.Clear();
+            categorias.Add("Todas");
+
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    string query = "SELECT DISTINCT categoria FROM productos WHERE categoria IS NOT NULL AND categoria <> '' ORDER BY categoria;";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            categorias.Add(reader["categoria"].ToString() ?? "General");
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                if (!categorias.Contains("General"))
+                {
+                    categorias.Add("General");
+                }
+            }
+
+            cmbCategoria.SelectedItem = categorias.Contains(categoriaActual) ? categoriaActual : "Todas";
+        }
+
+        private void VerificarColumnasInventario()
+        {
+            try
+            {
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
+                {
+                    conexion.Open();
+                    string query = @"SELECT COUNT(*)
+                                     FROM information_schema.columns
+                                     WHERE table_schema = 'public'
+                                       AND table_name = 'productos'
+                                       AND column_name IN ('stock_minimo', 'categoria');";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    {
+                        int columnas = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (columnas < 2)
+                        {
+                            MessageBox.Show("Faltan las columnas categoria o stock_minimo en productos. Ejecuta la migración de inventario antes de usar estos filtros.", "Inventario", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo verificar la estructura de inventario: " + ex.Message, "Inventario", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private string? PedirValor(string titulo, string mensaje, string valorActual)
         {
             Window ventana = new Window
@@ -158,7 +246,7 @@ namespace RefaccionariaPOS.Views
             txtInput.SelectAll();
             panel.Children.Add(txtInput);
 
-            Button btnAceptar = new Button { Content = "Guardar Stock", Width = 100, Margin = new Thickness(0, 15, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
+            Button btnAceptar = new Button { Content = "Guardar Stock", Width = 110, Margin = new Thickness(0, 15, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
             btnAceptar.IsDefault = true;
             btnAceptar.Click += (s, ev) => ventana.DialogResult = true;
 
@@ -168,7 +256,9 @@ namespace RefaccionariaPOS.Views
             txtInput.Focus();
 
             if (ventana.ShowDialog() == true)
+            {
                 return txtInput.Text;
+            }
 
             return null;
         }

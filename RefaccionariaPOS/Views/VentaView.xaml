@@ -58,6 +58,7 @@
                     <TextBlock Text="Escribe Código o Nombre:" FontSize="12" Foreground="#7F8C8D"/>
 
                     <TextBox x:Name="txtBuscarId" Height="35" FontSize="14" Padding="5,7,5,5" TextChanged="TxtBuscarId_TextChanged" KeyDown="TxtBuscarId_KeyDown"/>
+                    <TextBlock Text="Escáner USB activo: escanea el código y se agregará con Enter." FontSize="11" Foreground="#2563EB" Margin="0,8,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
 
                 <DataGrid Grid.Row="1" x:Name="dgResultadosBusqueda" AutoGenerateColumns="False" IsReadOnly="True" 
@@ -93,8 +94,21 @@
                     </StackPanel>
                 </Border>
 
-                <Button Grid.Row="2" x:Name="btnAgregarAlCarrito" Content="🛒 AGREGAR AL CARRITO" Height="45" Margin="0,15,0,0" 
-                        Background="#E67E22" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnAgregarAlCarrito_Click" Visibility="Collapsed"/>
+                <StackPanel Grid.Row="2" Margin="0,15,0,0">
+                    <Border Background="White" CornerRadius="8" Padding="12" BorderBrush="#BFDBFE" BorderThickness="1" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Impresora de Tickets" FontSize="13" FontWeight="Bold" Foreground="#1E3A8A"/>
+                            <ComboBox x:Name="cmbImpresoras" Margin="0,8,0,8"/>
+                            <DockPanel>
+                                <CheckBox x:Name="chkImprimirTicket" Content="Imprimir al cobrar" IsChecked="True" VerticalAlignment="Center"/>
+                                <Button x:Name="btnProbarImpresora" Content="Probar" DockPanel.Dock="Right" Width="88" Background="#06B6D4" Click="BtnProbarImpresora_Click"/>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Button x:Name="btnAgregarAlCarrito" Content="🛒 AGREGAR AL CARRITO" Height="45"
+                            Background="#E67E22" Foreground="White" FontSize="16" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnAgregarAlCarrito_Click" Visibility="Collapsed"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

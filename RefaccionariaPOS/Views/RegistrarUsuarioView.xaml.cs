@@ -1,8 +1,8 @@
-﻿using Npgsql;
+using Npgsql;
 using RefaccionariaPOS.Data;
+using RefaccionariaPOS.Security;
 using System;
-using System.Security.Cryptography;
-using System.Text;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -13,6 +13,7 @@ namespace RefaccionariaPOS.Views
         public RegistrarUsuarioView()
         {
             InitializeComponent();
+            CargarUsuarios();
         }
 
         private void BtnGuardarUsuario_Click(object sender, RoutedEventArgs e)
@@ -23,11 +24,11 @@ namespace RefaccionariaPOS.Views
 
             if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(rolSeleccionado))
             {
-                MessageBox.Show("Por favor, llena todos los campos para continuar.", "Campos Vacíos", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, llena todos los campos para continuar.", "Campos vacíos", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            string passwordEncriptada = EncriptarSHA256(password);
+            string passwordEncriptada = PasswordHasher.Hash(password);
 
             try
             {
@@ -36,7 +37,7 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    string queryInsertar = @"INSERT INTO usuarios (username, password_hash, rol) 
+                    string queryInsertar = @"INSERT INTO usuarios (username, password_hash, rol)
                                             VALUES (@user, @pass, @rol)
                                             ON CONFLICT (username) DO NOTHING;";
 
@@ -50,10 +51,11 @@ namespace RefaccionariaPOS.Views
 
                         if (filasAfectadas > 0)
                         {
-                            MessageBox.Show($"¡Usuario '{usuario}' registrado como {rolSeleccionado}!", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                            MessageBox.Show($"Usuario '{usuario}' registrado como {rolSeleccionado}.", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                             txtNuevoUsuario.Clear();
                             txtNuevaPassword.Clear();
                             cmbRol.SelectedIndex = 0;
+                            CargarUsuarios();
                         }
                         else
                         {
@@ -68,18 +70,55 @@ namespace RefaccionariaPOS.Views
             }
         }
 
-        private string EncriptarSHA256(string textoPlano)
+        private void BtnActualizar_Click(object sender, RoutedEventArgs e)
         {
-            using (SHA256 sha256Hash = SHA256.Create())
+            CargarUsuarios();
+        }
+
+        private void CargarUsuarios()
+        {
+            List<UsuarioSistema> usuarios = new List<UsuarioSistema>();
+
+            try
             {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(textoPlano));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
+                DatabaseConnection db = new DatabaseConnection();
+                using (NpgsqlConnection conexion = db.GetConnection())
                 {
-                    builder.Append(bytes[i].ToString("x2"));
+                    conexion.Open();
+                    string query = @"SELECT id, username, COALESCE(rol, 'Vendedor') AS rol, COALESCE(fecha_alta, CURRENT_TIMESTAMP) AS fecha_alta
+                                     FROM usuarios
+                                     ORDER BY fecha_alta DESC, username ASC;";
+
+                    using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            usuarios.Add(new UsuarioSistema
+                            {
+                                Id = Convert.ToInt32(reader["id"]),
+                                Username = reader["username"].ToString() ?? string.Empty,
+                                Rol = reader["rol"].ToString() ?? "Vendedor",
+                                FechaAlta = Convert.ToDateTime(reader["fecha_alta"])
+                            });
+                        }
+                    }
                 }
-                return builder.ToString();
+
+                dgUsuarios.ItemsSource = usuarios;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al cargar usuarios: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+    }
+
+    public class UsuarioSistema
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Rol { get; set; } = string.Empty;
+        public DateTime FechaAlta { get; set; }
     }
 }

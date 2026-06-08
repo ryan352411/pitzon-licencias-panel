@@ -10,10 +10,17 @@ namespace RefaccionariaPOS.Views
 {
     public partial class BandejaDespachoView : Window
     {
-        public BandejaDespachoView()
+        private readonly int usuarioId;
+
+        public BandejaDespachoView(int usuarioId)
         {
             InitializeComponent();
+            this.usuarioId = usuarioId;
             CargarSolicitudes();
+        }
+
+        public BandejaDespachoView() : this(0)
+        {
         }
 
         private void ProcesarSurtido(SolicitudDespacho solicitud)
@@ -92,10 +99,11 @@ namespace RefaccionariaPOS.Views
 
                         // Registramos la venta unificada en la BD
                         decimal totalVenta = precioProducto * solicitud.Cantidad;
-                        string queryVenta = @"INSERT INTO ventas (total, fecha_venta, estado, metodo_pago) 
-                                              VALUES (@total, CURRENT_TIMESTAMP, 'Completada', 'Surtido Taller');";
+                        string queryVenta = @"INSERT INTO ventas (usuario_id, total, fecha_venta, estado, metodo_pago)
+                                              VALUES (@usuarioId, @total, CURRENT_TIMESTAMP, 'Completada', 'Surtido Taller');";
                         using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion, transaccion))
                         {
+                            cmdVenta.Parameters.AddWithValue("@usuarioId", usuarioId == 0 ? DBNull.Value : (object)usuarioId);
                             cmdVenta.Parameters.AddWithValue("@total", totalVenta);
                             cmdVenta.ExecuteNonQuery();
                         }

@@ -31,7 +31,12 @@ namespace RefaccionariaPOS.Views
                 {
                     conexion.Open();
 
-                    string query = "SELECT id, folio, fecha_venta, total, estado, metodo_pago FROM ventas ORDER BY fecha_venta DESC";
+                    string query = @"
+                        SELECT v.id, v.folio, v.fecha_venta, v.total, v.estado, v.metodo_pago,
+                               COALESCE(u.username, 'Sin usuario') AS vendedor
+                        FROM ventas v
+                        LEFT JOIN usuarios u ON u.id = v.usuario_id
+                        ORDER BY v.fecha_venta DESC";
 
                     using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
                     using (NpgsqlDataReader reader = cmd.ExecuteReader())
@@ -45,7 +50,8 @@ namespace RefaccionariaPOS.Views
                                 Fecha = Convert.ToDateTime(reader["fecha_venta"]),
                                 Total = Convert.ToDecimal(reader["total"]),
                                 Estado = reader["estado"] == DBNull.Value ? "Completada" : reader["estado"].ToString() ?? "Completada",
-                                MetodoPago = reader["metodo_pago"] == DBNull.Value ? "Mostrador" : reader["metodo_pago"].ToString() ?? "Mostrador"
+                                MetodoPago = reader["metodo_pago"] == DBNull.Value ? "Mostrador" : reader["metodo_pago"].ToString() ?? "Mostrador",
+                                Vendedor = reader["vendedor"].ToString() ?? "Sin usuario"
                             };
 
                             listaVentas.Add(v);
@@ -111,6 +117,7 @@ namespace RefaccionariaPOS.Views
                             detalleTexto.AppendLine("ID: " + ventaSeleccionada.Id);
                             detalleTexto.AppendLine("Folio: " + ventaSeleccionada.Folio);
                             detalleTexto.AppendLine("Fecha: " + ventaSeleccionada.Fecha.ToString("dd/MM/yyyy HH:mm"));
+                            detalleTexto.AppendLine("Vendedor: " + ventaSeleccionada.Vendedor);
                             detalleTexto.AppendLine();
                             detalleTexto.AppendLine(string.Format("{0,-30} | {1,-8} | {2,-10} | {3,-10}", "Producto", "Cant.", "P. Unit", "Subtotal"));
                             detalleTexto.AppendLine(new string('-', 68));

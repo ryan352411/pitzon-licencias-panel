@@ -1,9 +1,6 @@
 ﻿using Npgsql;
 using RefaccionariaPOS.Data;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks; // <-- Necesario para tareas asíncronas
 using System.Windows;
 using System.Windows.Controls;
@@ -21,18 +18,20 @@ namespace RefaccionariaPOS.Views
     /// </summary>
     public partial class MainView : Window
     {
-        // Variable para almacenar el rol del usuario que inició sesión
-        private string rolUsuarioActual;
+        private readonly int idUsuarioActual;
+        private readonly string usuarioActual;
+        private readonly string rolUsuarioActual;
 
         // Objeto de conexión dedicado exclusivamente a escuchar alertas de PostgreSQL
         private NpgsqlConnection? conexionListener;
 
-        // Modificamos el constructor para recibir el rol desde el Login
-        public MainView(string rol)
+        public MainView(int idUsuario, string usuario, string rol)
         {
             InitializeComponent();
 
-            this.rolUsuarioActual = rol;
+            idUsuarioActual = idUsuario;
+            usuarioActual = usuario;
+            rolUsuarioActual = rol;
             ConfigurarPermisosPorRol();
 
             // Iniciamos el motor de escucha en segundo plano en cuanto carga el menú
@@ -44,7 +43,7 @@ namespace RefaccionariaPOS.Views
         /// </summary>
         private void ConfigurarPermisosPorRol()
         {
-            lblRolVisual.Text = rolUsuarioActual;
+            lblRolVisual.Text = $"{usuarioActual} - {rolUsuarioActual}";
 
             if (rolUsuarioActual == "Vendedor")
             {
@@ -117,7 +116,7 @@ namespace RefaccionariaPOS.Views
         // Botón (que agregaremos al XAML después) para abrir la Bandeja de Despacho
         private void BtnBandejaDespacho_Click(object sender, RoutedEventArgs e)
         {
-            BandejaDespachoView ventanaBandeja = new BandejaDespachoView();
+            BandejaDespachoView ventanaBandeja = new BandejaDespachoView(idUsuarioActual);
             ventanaBandeja.ShowDialog();
         }
 
@@ -135,7 +134,7 @@ namespace RefaccionariaPOS.Views
 
         private void BtnVenta_Click(object sender, RoutedEventArgs e)
         {
-            VentaView ventanaVenta = new VentaView();
+            VentaView ventanaVenta = new VentaView(idUsuarioActual);
             ventanaVenta.ShowDialog();
         }
 
@@ -147,82 +146,8 @@ namespace RefaccionariaPOS.Views
 
         private void BtnCorteCaja_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                DatabaseConnection db = new DatabaseConnection();
-
-                List<CorteCajaResumen> resumenes = new List<CorteCajaResumen>();
-
-                string fechaHoyTexto = DateTime.Now.ToString("yyyy-MM-dd");
-
-                using (NpgsqlConnection conexion = db.GetConnection())
-                {
-                    conexion.Open();
-
-                    string queryCorte = @"
-                        SELECT
-                            CASE
-                                WHEN metodo_pago ILIKE 'Taller - Refacciones%' THEN 'Taller - Refacciones'
-                                WHEN metodo_pago ILIKE 'Taller -%' THEN 'Taller - Servicio'
-                                WHEN metodo_pago = 'Surtido Taller' THEN 'Surtido a taller'
-                                ELSE 'Mostrador'
-                            END AS origen,
-                            COUNT(*) AS tickets,
-                            COALESCE(SUM(total), 0) AS total
-                        FROM ventas
-                        WHERE to_char(fecha_venta, 'YYYY-MM-DD') = @hoy
-                        GROUP BY origen
-                        ORDER BY origen;";
-
-                    using (NpgsqlCommand cmd = new NpgsqlCommand(queryCorte, conexion))
-                    {
-                        cmd.Parameters.AddWithValue("@hoy", fechaHoyTexto);
-
-                        using (NpgsqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                resumenes.Add(new CorteCajaResumen
-                                {
-                                    Origen = reader["origen"].ToString() ?? "Sin clasificar",
-                                    Tickets = Convert.ToInt32(reader["tickets"]),
-                                    Total = Convert.ToDecimal(reader["total"])
-                                });
-                            }
-                        }
-                    }
-                }
-
-                int totalVentas = resumenes.Sum(item => item.Tickets);
-                decimal dineroAcumuladoCaja = resumenes.Sum(item => item.Total);
-                StringBuilder detalleOrigenes = new StringBuilder();
-
-                foreach (CorteCajaResumen item in resumenes)
-                {
-                    detalleOrigenes.AppendLine($"{item.Origen}: {item.Tickets} ticket(s) | {item.Total:C}");
-                }
-
-                if (resumenes.Count == 0)
-                {
-                    detalleOrigenes.AppendLine("Sin ventas registradas hoy.");
-                }
-
-                string mensajeReporte = $"=== CORTE DE CAJA DIARIO ===\n\n" +
-                                        $"Fecha: {DateTime.Now:dd/MM/yyyy}\n" +
-                                        $"----------------------------------------\n" +
-                                        $"Tickets Emitidos: {totalVentas}\n" +
-                                        $"Total General: {dineroAcumuladoCaja:C}\n\n" +
-                                        $"=== DESGLOSE POR ORIGEN ===\n" +
-                                        detalleOrigenes +
-                                        $"\n" +
-                                        $"¿El dinero coincide con físico?";
-
-                MessageBox.Show(mensajeReporte, "Corte de Caja Exitoso", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al generar el corte de caja: " + ex.Message, "Error de Reportes", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            CorteCajaView ventanaCorte = new CorteCajaView();
+            ventanaCorte.ShowDialog();
         }
 
         private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
@@ -237,11 +162,5 @@ namespace RefaccionariaPOS.Views
             }
         }
 
-        private class CorteCajaResumen
-        {
-            public string Origen { get; set; } = string.Empty;
-            public int Tickets { get; set; }
-            public decimal Total { get; set; }
-        }
     }
 }

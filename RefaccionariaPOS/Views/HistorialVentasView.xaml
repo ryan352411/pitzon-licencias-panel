@@ -1,70 +1,49 @@
-﻿<Window x:Class="RefaccionariaPOS.Views.HistorialVentasView"
+<Window x:Class="RefaccionariaPOS.Views.HistorialVentasView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Historial de Ventas Realizadas"
-        Height="450"
-        Width="850"
+        Title="Historial de Ventas"
+        Height="650"
+        Width="1120"
+        MinHeight="560"
+        MinWidth="980"
         WindowStartupLocation="CenterScreen"
-        Background="#F4F6F9">
+        Background="#F3F5F8">
 
-    <Grid Margin="20">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="Registro de Ventas"
-                   FontSize="22"
-                   FontWeight="Bold"
-                   Foreground="#2C3E50"
-                   Margin="0,0,0,15"/>
+        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock Text="Historial de Ventas" FontSize="28" FontWeight="Bold" Foreground="#1E272E"/>
+            <TextBlock Text="Consulta ventas de mostrador, taller y refacciones con su canal de cobro." FontSize="14" Foreground="#64748B" Margin="0,6,0,0"/>
+        </StackPanel>
 
-        <DataGrid x:Name="dgHistorial"
-                  Grid.Row="1"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  Background="White"
-                  RowHeight="35"
-                  AlternatingRowBackground="#ecf0f1"
-                  PreviewMouseRightButtonDown="DgHistorial_PreviewMouseRightButtonDown">
+        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="18">
+            <DataGrid x:Name="dgHistorial"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      PreviewMouseRightButtonDown="DgHistorial_PreviewMouseRightButtonDown">
 
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Ver Detalles de la Venta"
-                              Click="MenuVerDetalles_Click"/>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Ver detalles de la venta" Click="MenuVerDetalles_Click"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
 
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID Interno"
-                                    Binding="{Binding Id}"
-                                    Width="80"/>
-
-                <DataGridTextColumn Header="Folio Venta"
-                                    Binding="{Binding Folio}"
-                                    Width="100"/>
-
-                <DataGridTextColumn Header="Fecha y Hora"
-                                    Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}"
-                                    Width="180"/>
-
-                <DataGridTextColumn Header="Total Cobrado"
-                                    Binding="{Binding Total, StringFormat={}{0:C}}"
-                                    Width="130"/>
-
-                <DataGridTextColumn Header="Origen"
-                                    Binding="{Binding Origen}"
-                                    Width="150"/>
-
-                <DataGridTextColumn Header="Método / Canal"
-                                    Binding="{Binding MetodoPago}"
-                                    Width="180"/>
-
-                <DataGridTextColumn Header="Estado"
-                                    Binding="{Binding Estado}"
-                                    Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
+                    <DataGridTextColumn Header="Folio" Binding="{Binding Folio}" Width="90"/>
+                    <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, StringFormat={}{0:dd/MM/yyyy HH:mm}}" Width="160"/>
+                    <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat={}{0:C}}" Width="130"/>
+                    <DataGridTextColumn Header="Origen" Binding="{Binding Origen}" Width="170"/>
+                    <DataGridTextColumn Header="Usuario" Binding="{Binding Vendedor}" Width="140"/>
+                    <DataGridTextColumn Header="Método / Canal" Binding="{Binding MetodoPago}" Width="230"/>
+                    <DataGridTextColumn Header="Estado" Binding="{Binding Estado}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
     </Grid>
 </Window>

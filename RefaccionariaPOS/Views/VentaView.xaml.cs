@@ -4,6 +4,8 @@ using RefaccionariaPOS.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Drawing;
+using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -17,11 +19,19 @@ namespace RefaccionariaPOS.Views
         private ObservableCollection<ProductoCarrito> listaCarrito = new ObservableCollection<ProductoCarrito>();
         private decimal totalVenta = 0;
         private Producto? productoEnVistaPrevia; // Reutilizamos tu variable perfectamente
+        private readonly int usuarioId;
 
-        public VentaView()
+        public VentaView(int usuarioId)
         {
             InitializeComponent();
+            this.usuarioId = usuarioId;
             dgCarrito.ItemsSource = listaCarrito;
+            CargarImpresoras();
+            Loaded += (_, _) => txtBuscarId.Focus();
+        }
+
+        public VentaView() : this(0)
+        {
         }
 
         // ==========================================================
@@ -108,7 +118,16 @@ namespace RefaccionariaPOS.Views
                 dgResultadosBusqueda.SelectedItem = null;
             }
         }
-        private void TxtBuscarId_KeyDown(object sender, KeyEventArgs e) { }
+        private void TxtBuscarId_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            ProcesarCodigoEscaneado();
+        }
 
         // ==========================================================
         // TUS MÉTODOS ORIGINALES (Se mantienen intactos)
@@ -146,17 +165,22 @@ namespace RefaccionariaPOS.Views
                 return;
             }
 
-            if (cantidad > productoEnVistaPrevia.Stock)
+            AgregarProductoAlCarrito(productoEnVistaPrevia, cantidad);
+        }
+
+        private void AgregarProductoAlCarrito(Producto producto, int cantidad)
+        {
+            if (cantidad > producto.Stock)
             {
-                MessageBox.Show($"¡Error de Stock! Solo quedan {productoEnVistaPrevia.Stock} piezas.", "Sin Existencias", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"¡Error de Stock! Solo quedan {producto.Stock} piezas.", "Sin Existencias", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            var itemExistente = listaCarrito.FirstOrDefault(i => i.CodigoBarras == productoEnVistaPrevia.CodigoBarras);
+            var itemExistente = listaCarrito.FirstOrDefault(i => i.CodigoBarras == producto.CodigoBarras);
 
             if (itemExistente != null)
             {
-                if ((itemExistente.Cantidad + cantidad) > productoEnVistaPrevia.Stock)
+                if ((itemExistente.Cantidad + cantidad) > producto.Stock)
                 {
                     MessageBox.Show($"Límite excedido. Ya tienes {itemExistente.Cantidad} en el carrito.", "Límite de Stock", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
@@ -169,9 +193,9 @@ namespace RefaccionariaPOS.Views
             {
                 listaCarrito.Add(new ProductoCarrito
                 {
-                    CodigoBarras = productoEnVistaPrevia.CodigoBarras,
-                    Nombre = productoEnVistaPrevia.Nombre,
-                    PrecioVenta = productoEnVistaPrevia.PrecioVenta,
+                    CodigoBarras = producto.CodigoBarras,
+                    Nombre = producto.Nombre,
+                    PrecioVenta = producto.PrecioVenta,
                     Cantidad = cantidad
                 });
             }
@@ -180,6 +204,60 @@ namespace RefaccionariaPOS.Views
             txtBuscarId.Clear();
             OcultarVistaPrevia();
             txtBuscarId.Focus();
+        }
+
+        private void ProcesarCodigoEscaneado()
+        {
+            string codigo = txtBuscarId.Text.Trim();
+            if (string.IsNullOrWhiteSpace(codigo))
+            {
+                return;
+            }
+
+            Producto? producto = BuscarProductoPorCodigoExacto(codigo);
+            if (producto == null)
+            {
+                MessageBox.Show("No se encontró una refacción con el código escaneado: " + codigo, "Código no encontrado", MessageBoxButton.OK, MessageBoxImage.Warning);
+                txtBuscarId.SelectAll();
+                return;
+            }
+
+            AgregarProductoAlCarrito(producto, 1);
+        }
+
+        private Producto? BuscarProductoPorCodigoExacto(string codigo)
+        {
+            DatabaseConnection db = new DatabaseConnection();
+
+            using (NpgsqlConnection conexion = db.GetConnection())
+            {
+                conexion.Open();
+                string query = @"SELECT codigo_barras, nombre, precio_venta, stock_actual
+                                 FROM productos
+                                 WHERE codigo_barras = @codigo
+                                 LIMIT 1;";
+
+                using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
+                {
+                    cmd.Parameters.AddWithValue("@codigo", codigo);
+
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            return null;
+                        }
+
+                        return new Producto
+                        {
+                            CodigoBarras = reader["codigo_barras"].ToString() ?? string.Empty,
+                            Nombre = reader["nombre"].ToString() ?? string.Empty,
+                            PrecioVenta = Convert.ToDecimal(reader["precio_venta"]),
+                            Stock = Convert.ToInt32(reader["stock_actual"])
+                        };
+                    }
+                }
+            }
         }
 
         private void ActualizarTotales()
@@ -212,12 +290,13 @@ namespace RefaccionariaPOS.Views
                     try
                     {
                         string queryVenta = @"
-                    INSERT INTO ventas (total, fecha_venta, estado, metodo_pago)
-                    VALUES (@total, @fecha, @estado, @metodoPago)
+                    INSERT INTO ventas (usuario_id, total, fecha_venta, estado, metodo_pago)
+                    VALUES (@usuarioId, @total, @fecha, @estado, @metodoPago)
                     RETURNING id, folio;";
 
                         using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion, transaccion))
                         {
+                            cmdVenta.Parameters.AddWithValue("@usuarioId", usuarioId == 0 ? DBNull.Value : (object)usuarioId);
                             cmdVenta.Parameters.AddWithValue("@total", totalVenta);
                             cmdVenta.Parameters.AddWithValue("@fecha", DateTime.Now);
                             cmdVenta.Parameters.AddWithValue("@estado", "Completada");
@@ -305,18 +384,20 @@ namespace RefaccionariaPOS.Views
                 }
             }
 
-            GenerarArchivoTicket(folioGeneradoBaseDatos);
+            GenerarTicket(folioGeneradoBaseDatos);
 
             MessageBox.Show("¡Venta con Folio #" + folioGeneradoBaseDatos + " procesada con éxito!", "Venta Completada", MessageBoxButton.OK, MessageBoxImage.Information);
 
             listaCarrito.Clear();
             ActualizarTotales();
+            txtBuscarId.Focus();
         }
 
-        private void GenerarArchivoTicket(int folio)
+        private void GenerarTicket(int folio)
         {
             try
             {
+                List<string> lineasTicket = CrearLineasTicket(folio);
                 string rutaCarpeta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tickets_Refaccionaria");
 
                 if (!Directory.Exists(rutaCarpeta))
@@ -326,36 +407,139 @@ namespace RefaccionariaPOS.Views
 
                 string rutaArchivo = Path.Combine(rutaCarpeta, $"Ticket_{folio}.txt");
 
-                using (StreamWriter ticket = new StreamWriter(rutaArchivo))
+                File.WriteAllLines(rutaArchivo, lineasTicket);
+
+                if (chkImprimirTicket.IsChecked == true)
                 {
-                    ticket.WriteLine("========================================");
-                    ticket.WriteLine("       🛠️ REFACCIONARIA POS v1.0 🛠️       ");
-                    ticket.WriteLine("========================================");
-                    ticket.WriteLine($"Folio No:  {folio}"); // Sincronizado con Postgres
-                    ticket.WriteLine($"Fecha:     {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-                    ticket.WriteLine("----------------------------------------");
-                    ticket.WriteLine(string.Format("{0,-22} {1,-4} {2,11}", "Producto", "Cant", "Subtotal"));
-                    ticket.WriteLine("----------------------------------------");
-
-                    foreach (var item in listaCarrito)
-                    {
-                        string nombreCorto = item.Nombre.Length > 20 ? item.Nombre.Substring(0, 20) : item.Nombre;
-                        ticket.WriteLine(string.Format("{0,-22} {1,-4} {2,11:C}", nombreCorto, item.Cantidad, item.Subtotal));
-                    }
-
-                    ticket.WriteLine("----------------------------------------");
-                    ticket.WriteLine(string.Format("{0,-27} {1,11:C}", "TOTAL:", totalVenta));
-                    ticket.WriteLine("========================================");
-                    ticket.WriteLine("    ¡Gracias por su preferencia!       ");
-                    ticket.WriteLine("   Conserve este ticket para cambios    ");
-                    ticket.WriteLine("========================================");
+                    ImprimirTicket(lineasTicket);
                 }
-
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(rutaArchivo) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                MessageBox.Show("No se pudo desplegar el archivo de ticket: " + ex.Message, "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("La venta se registró, pero no se pudo generar o imprimir el ticket: " + ex.Message, "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private List<string> CrearLineasTicket(int folio)
+        {
+            List<string> lineas = new List<string>
+            {
+                "========================================",
+                "        REFACCIONARIA POS v1.0          ",
+                "========================================",
+                $"Folio No:  {folio}",
+                $"Fecha:     {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
+                "----------------------------------------",
+                string.Format("{0,-22} {1,-4} {2,11}", "Producto", "Cant", "Subtotal"),
+                "----------------------------------------"
+            };
+
+            foreach (var item in listaCarrito)
+            {
+                string nombreCorto = item.Nombre.Length > 20 ? item.Nombre.Substring(0, 20) : item.Nombre;
+                lineas.Add(string.Format("{0,-22} {1,-4} {2,11:C}", nombreCorto, item.Cantidad, item.Subtotal));
+            }
+
+            lineas.Add("----------------------------------------");
+            lineas.Add(string.Format("{0,-27} {1,11:C}", "TOTAL:", totalVenta));
+            lineas.Add("========================================");
+            lineas.Add("    ¡Gracias por su preferencia!       ");
+            lineas.Add("   Conserve este ticket para cambios    ");
+            lineas.Add("========================================");
+
+            return lineas;
+        }
+
+        private void CargarImpresoras()
+        {
+            cmbImpresoras.Items.Clear();
+
+            foreach (string impresora in PrinterSettings.InstalledPrinters)
+            {
+                cmbImpresoras.Items.Add(impresora);
+            }
+
+            string impresoraDefault = new PrinterSettings().PrinterName;
+            if (cmbImpresoras.Items.Contains(impresoraDefault))
+            {
+                cmbImpresoras.SelectedItem = impresoraDefault;
+            }
+            else if (cmbImpresoras.Items.Count > 0)
+            {
+                cmbImpresoras.SelectedIndex = 0;
+            }
+            else
+            {
+                chkImprimirTicket.IsChecked = false;
+                chkImprimirTicket.IsEnabled = false;
+                btnProbarImpresora.IsEnabled = false;
+            }
+        }
+
+        private void ImprimirTicket(List<string> lineasTicket)
+        {
+            string? impresoraSeleccionada = cmbImpresoras.SelectedItem?.ToString();
+            if (string.IsNullOrWhiteSpace(impresoraSeleccionada))
+            {
+                throw new InvalidOperationException("No hay una impresora seleccionada.");
+            }
+
+            int lineaActual = 0;
+            using (PrintDocument documento = new PrintDocument())
+            {
+                documento.PrinterSettings.PrinterName = impresoraSeleccionada;
+                documento.PrintPage += (sender, e) =>
+                {
+                    if (e.Graphics == null)
+                    {
+                        return;
+                    }
+
+                    using Font fuente = new Font("Courier New", 9);
+                    Brush brocha = Brushes.Black;
+                    float altoLinea = fuente.GetHeight(e.Graphics) + 2;
+                    float x = e.MarginBounds.Left;
+                    float y = e.MarginBounds.Top;
+
+                    while (lineaActual < lineasTicket.Count)
+                    {
+                        if (y + altoLinea > e.MarginBounds.Bottom)
+                        {
+                            e.HasMorePages = true;
+                            return;
+                        }
+
+                        e.Graphics.DrawString(lineasTicket[lineaActual], fuente, brocha, x, y);
+                        y += altoLinea;
+                        lineaActual++;
+                    }
+
+                    e.HasMorePages = false;
+                };
+
+                documento.Print();
+            }
+        }
+
+        private void BtnProbarImpresora_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ImprimirTicket(new List<string>
+                {
+                    "========================================",
+                    "        PRUEBA DE IMPRESORA POS         ",
+                    "========================================",
+                    $"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
+                    "Impresora lista para tickets.",
+                    "========================================"
+                });
+
+                MessageBox.Show("Ticket de prueba enviado a la impresora.", "Impresora", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo imprimir la prueba: " + ex.Message, "Impresora", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }
