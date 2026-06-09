@@ -39,7 +39,12 @@
                     <TextBlock Text="Rol activo" FontSize="11" Foreground="#B8C4D6"/>
                     <TextBlock x:Name="lblRolVisual" Text="Cargando..." FontSize="14" FontWeight="Bold" Foreground="#2ECC71" Margin="0,0,0,10"/>
 
-                    <Button x:Name="btnCerrarSesion" Content="Cerrar Sesión" Height="36" Background="#E74C3C" Foreground="White" FontSize="13" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="BtnCerrarSesion_Click"/>
+                    <Border Background="#0F766E" CornerRadius="8" Padding="10" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Demo restante" FontSize="11" Foreground="#CCFBF1"/>
+                            <TextBlock x:Name="lblDemoRestante" Text="24h 00m" FontSize="18" FontWeight="Black" Foreground="White" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
         </Border>

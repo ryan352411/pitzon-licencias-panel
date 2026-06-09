@@ -424,30 +424,59 @@ namespace RefaccionariaPOS.Views
         {
             List<string> lineas = new List<string>
             {
-                "========================================",
-                "        PITZÓN POS v1.0                ",
-                "========================================",
-                $"Folio No:  {folio}",
-                $"Fecha:     {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
-                "----------------------------------------",
-                string.Format("{0,-22} {1,-4} {2,11}", "Producto", "Cant", "Subtotal"),
-                "----------------------------------------"
+                "SERVICIO AUTOMOTRIZ LOPEZ",
+                "Refacciones y Accesorios Automotrices",
+                "Direccion:",
+                "Calle Principal #123, Col. Centro, Tehuacan, Puebla",
+                "Tel / WhatsApp:",
+                "(238) 000-0000",
+                $"Ticket No.: {folio}",
+                $"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
+                string.Empty,
+                "#  Clave        Descripcion                 Marca      Cant.  P. Unit.      Total",
+                "--------------------------------------------------------------------------------"
             };
 
-            foreach (var item in listaCarrito)
+            int numeroLinea = 1;
+            foreach (var item in listaCarrito.Take(15))
             {
-                string nombreCorto = item.Nombre.Length > 20 ? item.Nombre.Substring(0, 20) : item.Nombre;
-                lineas.Add(string.Format("{0,-22} {1,-4} {2,11:C}", nombreCorto, item.Cantidad, item.Subtotal));
+                lineas.Add(string.Format(
+                    "{0,-2} {1,-12} {2,-27} {3,-10} {4,5} {5,9:C} {6,10:C}",
+                    numeroLinea,
+                    AjustarTexto(item.CodigoBarras, 12),
+                    AjustarTexto(item.Nombre, 27),
+                    string.Empty,
+                    item.Cantidad,
+                    item.PrecioVenta,
+                    item.Subtotal));
+                numeroLinea++;
             }
 
-            lineas.Add("----------------------------------------");
-            lineas.Add(string.Format("{0,-27} {1,11:C}", "TOTAL:", totalVenta));
-            lineas.Add("========================================");
-            lineas.Add("    ¡Gracias por su preferencia!       ");
-            lineas.Add("   Conserve este ticket para cambios    ");
-            lineas.Add("========================================");
+            while (numeroLinea <= 15)
+            {
+                lineas.Add($"{numeroLinea,-2}");
+                numeroLinea++;
+            }
+
+            lineas.Add("--------------------------------------------------------------------------------");
+            lineas.Add(string.Format("{0,63} {1,14:C}", "Subtotal:", totalVenta));
+            lineas.Add(string.Format("{0,63} {1,14:C}", "TOTAL:", totalVenta));
+            lineas.Add(string.Empty);
+            lineas.Add("Gracias por su preferencia  |  Servicio Automotriz Lopez  |  \"Tu refaccionaria de confianza\"");
 
             return lineas;
+        }
+
+        private static string AjustarTexto(string texto, int longitudMaxima)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+            {
+                return string.Empty;
+            }
+
+            return texto.Length <= longitudMaxima
+                ? texto
+                : texto.Substring(0, longitudMaxima);
         }
 
         private void CargarImpresoras()
@@ -495,7 +524,7 @@ namespace RefaccionariaPOS.Views
                         return;
                     }
 
-                    using Font fuente = new Font("Courier New", 9);
+                    using Font fuente = new Font("Courier New", 8);
                     Brush brocha = Brushes.Black;
                     float altoLinea = fuente.GetHeight(e.Graphics) + 2;
                     float x = e.MarginBounds.Left;

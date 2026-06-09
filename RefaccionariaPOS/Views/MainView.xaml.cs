@@ -1,10 +1,12 @@
 using Npgsql;
 using RefaccionariaPOS.Data;
+using RefaccionariaPOS.Security;
 using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace RefaccionariaPOS.Views
 {
@@ -17,6 +19,7 @@ namespace RefaccionariaPOS.Views
         private readonly string usuarioActual;
         private readonly string rolUsuarioActual;
         private readonly CancellationTokenSource listenerCancellation = new();
+        private readonly DispatcherTimer demoTimer = new DispatcherTimer();
         private NpgsqlConnection? conexionListener;
 
         public MainView(int idUsuario, string usuario, string rol)
@@ -28,6 +31,7 @@ namespace RefaccionariaPOS.Views
             rolUsuarioActual = rol;
 
             ConfigurarPermisosPorRol();
+            ConfigurarContadorDemo();
             _ = IniciarListenerNotificacionesAsync();
         }
 
@@ -44,6 +48,46 @@ namespace RefaccionariaPOS.Views
             btnCorteCaja.IsEnabled = false;
             btnUsuarios.IsEnabled = false;
             lblSubtitulo.Text = "Terminal de cobro activa. Registra ventas y consulta inventario.";
+        }
+
+        private void ConfigurarContadorDemo()
+        {
+            demoTimer.Interval = TimeSpan.FromMinutes(1);
+            demoTimer.Tick += (_, _) => ActualizarContadorDemo();
+            ActualizarContadorDemo();
+            demoTimer.Start();
+        }
+
+        private void ActualizarContadorDemo()
+        {
+            TimeSpan restante = DemoLicenseService.GetRemainingTime();
+            lblDemoRestante.Text = DemoLicenseService.FormatRemainingTime(restante);
+
+            if (restante > TimeSpan.Zero)
+            {
+                return;
+            }
+
+            demoTimer.Stop();
+            BloquearDemoVencido();
+        }
+
+        private void BloquearDemoVencido()
+        {
+            btnVenta.IsEnabled = false;
+            btnBandejaDespacho.IsEnabled = false;
+            btnInventario.IsEnabled = false;
+            btnHistorial.IsEnabled = false;
+            btnCorteCaja.IsEnabled = false;
+            btnUsuarios.IsEnabled = false;
+
+            MessageBox.Show(
+                "El demo de 1 dia ha vencido. Contacta al proveedor para activar la aplicacion.",
+                "Demo vencido",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            Application.Current.Shutdown();
         }
 
         private async Task IniciarListenerNotificacionesAsync()
@@ -92,6 +136,7 @@ namespace RefaccionariaPOS.Views
             base.OnClosed(e);
 
             CerrarListenerNotificaciones();
+            demoTimer.Stop();
             listenerCancellation.Dispose();
         }
 
@@ -123,27 +168,6 @@ namespace RefaccionariaPOS.Views
         private void BtnCorteCaja_Click(object sender, RoutedEventArgs e)
         {
             MostrarDialogo(new CorteCajaView());
-        }
-
-        private void BtnCerrarSesion_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBoxResult resultado = MessageBox.Show(
-                "Seguro que deseas cerrar la sesion actual?",
-                "Cerrar Sesion",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (resultado != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
-            CerrarListenerNotificaciones();
-
-            LoginView pantallaLogin = new LoginView();
-            Application.Current.MainWindow = pantallaLogin;
-            pantallaLogin.Show();
-            Close();
         }
 
         private void CerrarListenerNotificaciones()
