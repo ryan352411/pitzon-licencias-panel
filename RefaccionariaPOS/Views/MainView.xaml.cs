@@ -82,7 +82,7 @@ namespace RefaccionariaPOS.Views
             btnUsuarios.IsEnabled = false;
 
             MessageBox.Show(
-                "El demo de 1 dia ha vencido. Contacta al proveedor para activar la aplicacion.",
+                "El demo de 1 mes ha vencido. Contacta al proveedor para activar la aplicacion.",
                 "Demo vencido",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);

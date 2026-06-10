@@ -102,10 +102,14 @@ namespace RefaccionariaPOS.Views
                     conexion.Open();
 
                     string query = @"
-                        SELECT dv.cantidad, dv.precio_unitario, dv.subtotal, p.nombre AS producto_nombre
+                        SELECT dv.cantidad,
+                               dv.precio_unitario,
+                               dv.subtotal,
+                               COALESCE(p.nombre, 'Producto eliminado') AS producto_nombre
                         FROM detalles_venta dv
-                        INNER JOIN productos p ON dv.producto_id = p.id
-                        WHERE dv.venta_id = @ventaId";
+                        LEFT JOIN productos p ON dv.producto_id = p.id
+                        WHERE dv.venta_id = @ventaId
+                        ORDER BY dv.id";
 
                     using (NpgsqlCommand cmd = new NpgsqlCommand(query, conexion))
                     {
@@ -118,6 +122,8 @@ namespace RefaccionariaPOS.Views
                             detalleTexto.AppendLine("Folio: " + ventaSeleccionada.Folio);
                             detalleTexto.AppendLine("Fecha: " + ventaSeleccionada.Fecha.ToString("dd/MM/yyyy HH:mm"));
                             detalleTexto.AppendLine("Vendedor: " + ventaSeleccionada.Vendedor);
+                            detalleTexto.AppendLine("Origen: " + ventaSeleccionada.Origen);
+                            detalleTexto.AppendLine("Metodo/Canal: " + ventaSeleccionada.MetodoPago);
                             detalleTexto.AppendLine();
                             detalleTexto.AppendLine(string.Format("{0,-30} | {1,-8} | {2,-10} | {3,-10}", "Producto", "Cant.", "P. Unit", "Subtotal"));
                             detalleTexto.AppendLine(new string('-', 68));
@@ -143,7 +149,7 @@ namespace RefaccionariaPOS.Views
 
                             if (!tieneArticulos)
                             {
-                                detalleTexto.AppendLine("No se encontraron artículos registrados para esta venta.");
+                                detalleTexto.AppendLine(ObtenerMensajeSinArticulos(ventaSeleccionada));
                             }
                             else
                             {
@@ -154,12 +160,72 @@ namespace RefaccionariaPOS.Views
                     }
                 }
 
-                MessageBox.Show(detalleTexto.ToString(), "Artículos Vendidos", MessageBoxButton.OK, MessageBoxImage.Information);
+                MostrarDetalleVenta(detalleTexto.ToString());
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error al recuperar los detalles de los productos: " + ex.Message, "Error de Lectura", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private static string ObtenerMensajeSinArticulos(Venta venta)
+        {
+            if (venta.Origen.Equals("Taller - Servicio", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Esta venta corresponde a mano de obra/servicio de taller y no tiene refacciones ligadas.";
+            }
+
+            return "No se encontraron articulos registrados para esta venta. Las ventas nuevas ya guardaran el detalle automaticamente.";
+        }
+
+        private void MostrarDetalleVenta(string detalle)
+        {
+            Window ventanaDetalle = new Window
+            {
+                Title = "Articulos Vendidos",
+                Owner = this,
+                Width = 760,
+                Height = 520,
+                MinWidth = 620,
+                MinHeight = 420,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = System.Windows.Media.Brushes.White
+            };
+
+            Grid contenedor = new Grid { Margin = new Thickness(16) };
+            contenedor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            contenedor.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            TextBox textoDetalle = new TextBox
+            {
+                Text = detalle,
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.NoWrap,
+                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                FontSize = 13,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(10)
+            };
+
+            Button btnCerrar = new Button
+            {
+                Content = "Cerrar",
+                Width = 110,
+                Height = 34,
+                Margin = new Thickness(0, 14, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            btnCerrar.Click += (_, _) => ventanaDetalle.Close();
+
+            Grid.SetRow(textoDetalle, 0);
+            Grid.SetRow(btnCerrar, 1);
+            contenedor.Children.Add(textoDetalle);
+            contenedor.Children.Add(btnCerrar);
+
+            ventanaDetalle.Content = contenedor;
+            ventanaDetalle.ShowDialog();
         }
     }
 }

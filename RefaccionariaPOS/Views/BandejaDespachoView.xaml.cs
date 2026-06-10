@@ -34,7 +34,8 @@ namespace RefaccionariaPOS.Views
                 {
                     try
                     {
-                        string queryCheck = "SELECT stock_actual, precio_venta FROM productos WHERE codigo_barras = @codigo FOR UPDATE;";
+                        string queryCheck = "SELECT id, stock_actual, precio_venta FROM productos WHERE codigo_barras = @codigo FOR UPDATE;";
+                        int productoId = 0;
                         int stockDisponible = 0;
                         decimal precioProducto = 0;
 
@@ -47,6 +48,7 @@ namespace RefaccionariaPOS.Views
                             {
                                 if (reader.Read())
                                 {
+                                    productoId = Convert.ToInt32(reader["id"]);
                                     stockDisponible = Convert.ToInt32(reader["stock_actual"]);
                                     precioProducto = reader["precio_venta"] != DBNull.Value ? Convert.ToDecimal(reader["precio_venta"]) : 0m;
                                 }
@@ -99,13 +101,28 @@ namespace RefaccionariaPOS.Views
 
                         // Registramos la venta unificada en la BD
                         decimal totalVenta = precioProducto * solicitud.Cantidad;
+                        int ventaId;
                         string queryVenta = @"INSERT INTO ventas (usuario_id, total, fecha_venta, estado, metodo_pago)
-                                              VALUES (@usuarioId, @total, CURRENT_TIMESTAMP, 'Completada', 'Surtido Taller');";
+                                              VALUES (@usuarioId, @total, CURRENT_TIMESTAMP, 'Completada', 'Surtido Taller')
+                                              RETURNING id;";
                         using (NpgsqlCommand cmdVenta = new NpgsqlCommand(queryVenta, conexion, transaccion))
                         {
                             cmdVenta.Parameters.AddWithValue("@usuarioId", usuarioId == 0 ? DBNull.Value : (object)usuarioId);
                             cmdVenta.Parameters.AddWithValue("@total", totalVenta);
-                            cmdVenta.ExecuteNonQuery();
+                            ventaId = Convert.ToInt32(cmdVenta.ExecuteScalar());
+                        }
+
+                        string queryDetalleVenta = @"INSERT INTO detalles_venta
+                                                     (venta_id, producto_id, cantidad, precio_unitario, subtotal)
+                                                     VALUES (@ventaId, @productoId, @cantidad, @precio, @subtotal);";
+                        using (NpgsqlCommand cmdDetalleVenta = new NpgsqlCommand(queryDetalleVenta, conexion, transaccion))
+                        {
+                            cmdDetalleVenta.Parameters.AddWithValue("@ventaId", ventaId);
+                            cmdDetalleVenta.Parameters.AddWithValue("@productoId", productoId);
+                            cmdDetalleVenta.Parameters.AddWithValue("@cantidad", solicitud.Cantidad);
+                            cmdDetalleVenta.Parameters.AddWithValue("@precio", precioProducto);
+                            cmdDetalleVenta.Parameters.AddWithValue("@subtotal", totalVenta);
+                            cmdDetalleVenta.ExecuteNonQuery();
                         }
 
                         transaccion.Commit();

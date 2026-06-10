@@ -42,7 +42,7 @@
                     <Border Background="#0F766E" CornerRadius="8" Padding="10" Margin="0,4,0,0">
                         <StackPanel>
                             <TextBlock Text="Demo restante" FontSize="11" Foreground="#CCFBF1"/>
-                            <TextBlock x:Name="lblDemoRestante" Text="24h 00m" FontSize="18" FontWeight="Black" Foreground="White" Margin="0,2,0,0"/>
+                            <TextBlock x:Name="lblDemoRestante" Text="30d 00h" FontSize="18" FontWeight="Black" Foreground="White" Margin="0,2,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
