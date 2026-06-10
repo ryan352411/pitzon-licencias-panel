@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de Licencias PITZON / TORQO</title>
+  <style>
+    :root{color-scheme:dark;--line:#2b364d;--text:#edf4ff;--muted:#9fb0c9;--blue:#38bdf8;--green:#34d399;--red:#fb7185;--bg:#090f1d;--panel:#111827}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top left,#17365c,#090f1d 42%,#070b14);color:var(--text)}button,input,select,textarea{font:inherit}button{border:0;border-radius:12px;padding:10px 14px;background:var(--blue);color:#07111f;font-weight:800;cursor:pointer}button.red{background:var(--red);color:white}button.green{background:var(--green)}button.secondary{background:#243148;color:var(--text)}input,select,textarea{width:100%;box-sizing:border-box;margin:6px 0 14px;padding:11px;border-radius:12px;border:1px solid var(--line);background:#0d1424;color:white}.login{min-height:100vh;display:grid;place-items:center;padding:24px}.box,.panel,.card{background:#111827e8;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 70px #0007}.box{width:min(420px,92vw)}.brand{display:flex;gap:14px;align-items:center;margin-bottom:18px}.mark{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,var(--blue),var(--green))}.error{color:#fecdd3}.muted{color:var(--muted)}.app{display:none}header{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 28px;border-bottom:1px solid var(--line);background:#0d1424d9;backdrop-filter:blur(14px);position:sticky;top:0}.wrap{padding:22px;display:grid;gap:16px}.toolbar{display:grid;grid-template-columns:180px 1fr auto;gap:12px;align-items:end}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card b{font-size:30px;display:block;margin-top:6px}.grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px}.table{overflow:auto;max-height:62vh}table{width:100%;min-width:850px;border-collapse:collapse}td,th{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{font-size:12px;color:#bdd2f0;text-transform:uppercase}.pill{border-radius:999px;padding:5px 9px;font-weight:800;display:inline-block}.ok{background:#064e3b;color:#a7f3d0}.off{background:#5f1624;color:#fecdd3}.event{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#0d1424}dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--text);padding:0;width:min(460px,92vw)}dialog::backdrop{background:#020617aa}@media(max-width:900px){.toolbar,.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}header{align-items:flex-start;flex-direction:column}}@media(max-width:560px){.cards{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <section id="login" class="login">
+    <form id="loginForm" class="box">
+      <div class="brand"><div class="mark"></div><div><h1>Panel de Licencias</h1><p class="muted">PITZON / TORQO</p></div></div>
+      <label>Usuario<input id="username" value="admin" autocomplete="username"></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="current-password"></label>
+      <button style="width:100%">Entrar</button>
+      <p id="err" class="error"></p>
+    </form>
+  </section>
+  <section id="app" class="app">
+    <header><div><h2>Administración de aplicaciones</h2><div class="muted">Instalaciones, estado y eventos</div></div><button id="logout" class="secondary">Cerrar sesión</button></header>
+    <main class="wrap">
+      <section class="toolbar"><label>Aplicación<select id="appFilter"><option value="ALL">Todas</option><option>PITZON</option><option>TORQO</option></select></label><label>Buscar<input id="search" placeholder="Equipo, usuario o ID"></label><button id="refresh">Actualizar</button></section>
+      <section id="cards" class="cards"></section>
+      <section class="grid"><div class="panel"><h2>Instalaciones</h2><div class="table"><table><thead><tr><th>App</th><th>Equipo</th><th>Usuario</th><th>Último uso</th><th>Usos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="rows"></tbody></table></div></div><aside class="panel"><h2>Eventos</h2><div id="events"></div></aside></section>
+    </main>
+  </section>
+  <dialog id="dlg"><form method="dialog" class="box"><h3>Notas</h3><textarea id="notes"></textarea><button id="saveNotes" type="button">Guardar</button> <button class="secondary">Cerrar</button></form></dialog>
+<script>
+const API='https://fxdkwupfkhgyadrxpifs.supabase.co/functions/v1/licencias-panel';
+let noteId=null,data=[];
+const $=id=>document.getElementById(id);
+const token=()=>localStorage.getItem('licensing_token')||'';
+const authHeaders=()=>token()?{Authorization:'Bearer '+token()}:{};
+async function api(path,options={}){const headers={...(options.headers||{}),...authHeaders()};const res=await fetch(API+path,{...options,headers});if(res.status===401){localStorage.removeItem('licensing_token');showLogin();throw new Error('No autorizado')}return res}
+function showLogin(){login.style.display='grid';app.style.display='none'}
+function showApp(){login.style.display='none';app.style.display='block';load()}
+loginForm.onsubmit=async e=>{e.preventDefault();err.textContent='';const res=await fetch(API+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username.value,password:password.value})});if(!res.ok){err.textContent='Credenciales inválidas';return}const body=await res.json();localStorage.setItem('licensing_token',body.token);showApp()};
+logout.onclick=()=>{localStorage.removeItem('licensing_token');showLogin()};
+refresh.onclick=load;appFilter.onchange=load;search.oninput=()=>setTimeout(loadRows,150);
+saveNotes.onclick=async()=>{await api('/api/installations/'+noteId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:notes.value})});dlg.close();loadRows()};
+async function load(){await Promise.all([loadSummary(),loadRows(),loadEvents()])}
+async function loadSummary(){const d=await api('/api/summary').then(r=>r.json());const t=d.reduce((a,x)=>({i:a.i+x.totalInstallations,a:a.a+x.activeInstallations,b:a.b+x.inactiveInstallations,l:a.l+x.totalLaunches}),{i:0,a:0,b:0,l:0});cards.innerHTML=card('Instalaciones',t.i)+card('Activas',t.a)+card('Bloqueadas',t.b)+card('Ejecuciones',t.l)}
+async function loadRows(){const q=new URLSearchParams({appCode:appFilter.value,search:search.value});data=await api('/api/installations?'+q).then(r=>r.json());rows.innerHTML=data.map(x=>'<tr><td><b>'+esc(x.appCode)+'</b></td><td>'+esc(x.machineName)+'<br><small>'+esc(x.installationId)+'</small></td><td>'+esc(x.windowsUser)+'</td><td>'+dt(x.lastSeenAt)+'</td><td>'+x.launchCount+'</td><td><span class="pill '+(x.isActive?'ok':'off')+'">'+(x.isActive?'Activa':'Bloqueada')+'</span></td><td><button class="'+(x.isActive?'red':'green')+'" onclick="act(\''+x.installationId+'\','+(!x.isActive)+')">'+(x.isActive?'Desactivar':'Activar')+'</button> <button onclick="openN(\''+x.installationId+'\')">Notas</button></td></tr>').join('')||'<tr><td colspan="7">Sin instalaciones</td></tr>'}
+async function loadEvents(){const q=new URLSearchParams({appCode:appFilter.value});const d=await api('/api/events?'+q).then(r=>r.json());events.innerHTML=d.map(x=>'<div class="event"><b>'+esc(x.appCode)+'</b> '+esc(x.eventType)+'<br><small>'+esc(x.machineName)+' / '+esc(x.windowsUser)+'<br>'+dt(x.eventAt)+'</small></div>').join('')||'Sin eventos'}
+async function act(id,isActive){await api('/api/installations/'+id+'/activation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})});load()}
+function openN(id){noteId=id;const r=data.find(x=>x.installationId===id);notes.value=r?.notes||'';dlg.showModal()}
+function card(a,b){return '<div class="card">'+a+'<b>'+b+'</b></div>'}
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function dt(v){return v?new Date(v).toLocaleString('es-MX'):'-'}
+if(token())showApp();
+</script>
+</body>
+</html>
