@@ -155,7 +155,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+      grid-template-columns: 1fr;
       gap: 18px;
       align-items: start;
     }
@@ -330,8 +330,7 @@
                   <th>App</th>
                   <th>Equipo</th>
                   <th>Usuario</th>
-                  <th>Último uso</th>
-                  <th>Usos</th>
+                  <th>Instalado</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -340,11 +339,6 @@
             </table>
           </div>
         </div>
-
-        <aside class="panel">
-          <h2>Eventos</h2>
-          <div id="events"></div>
-        </aside>
       </section>
     </main>
   </section>
@@ -435,7 +429,7 @@
 
     async function load() {
       try {
-        await Promise.all([loadSummary(), loadRows(), loadEvents()]);
+        await Promise.all([loadSummary(), loadRows()]);
       } catch (error) {
         if (error.message !== 'No autorizado') {
           console.error(error);
@@ -450,15 +444,14 @@
       const total = source.reduce((a, x) => ({
         i: a.i + x.totalInstallations,
         a: a.a + x.activeInstallations,
-        b: a.b + x.inactiveInstallations,
-        l: a.l + x.totalLaunches
-      }), { i: 0, a: 0, b: 0, l: 0 });
+        b: a.b + x.inactiveInstallations
+      }), { i: 0, a: 0, b: 0 });
 
       cards.innerHTML =
         card('Instalaciones', total.i) +
         card('Activas', total.a) +
         card('Bloqueadas', total.b) +
-        card('Ejecuciones', total.l);
+        card('Aplicaciones', source.length);
     }
 
     async function loadRows() {
@@ -469,22 +462,11 @@
         '<td><b>' + esc(x.appCode) + '</b></td>' +
         '<td>' + esc(x.machineName) + '<br><small>' + esc(x.installationId) + '</small></td>' +
         '<td>' + esc(x.windowsUser) + '</td>' +
-        '<td>' + dt(x.lastSeenAt) + '</td>' +
-        '<td>' + x.launchCount + '</td>' +
+        '<td>' + dt(x.firstSeenAt) + '</td>' +
         '<td><span class="pill ' + (x.isActive ? 'ok' : 'off') + '">' + (x.isActive ? 'Activa' : 'Bloqueada') + '</span></td>' +
         '<td><div class="row-actions"><button class="' + (x.isActive ? 'red' : 'green') + '" onclick="act(\'' + x.installationId + '\',' + (!x.isActive) + ')">' + (x.isActive ? 'Desactivar' : 'Activar') + '</button><button onclick="openN(\'' + x.installationId + '\')">Notas</button></div></td>' +
         '</tr>'
-      ).join('') || '<tr><td colspan="7">Sin instalaciones</td></tr>';
-    }
-
-    async function loadEvents() {
-      const query = new URLSearchParams({ appCode: appFilter.value });
-      const source = await api('/api/events?' + query).then(r => r.json());
-      events.innerHTML = source.map(x =>
-        '<div class="event"><b>' + esc(x.appCode) + '</b> ' + esc(x.eventType) +
-        '<br><small>' + esc(x.machineName) + ' / ' + esc(x.windowsUser) +
-        '<br>' + dt(x.eventAt) + '</small></div>'
-      ).join('') || 'Sin eventos';
+      ).join('') || '<tr><td colspan="6">Sin instalaciones</td></tr>';
     }
 
     async function act(id, isActive) {
