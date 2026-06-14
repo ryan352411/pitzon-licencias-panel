@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Panel de Licencias PITZON / TORQO</title>
+  <title>Panel de Licencias</title>
   <style>
     :root {
       color-scheme: dark;
@@ -282,11 +282,11 @@
         <div class="mark"></div>
         <div>
           <h1>Panel de Licencias</h1>
-          <p class="muted">PITZON / TORQO</p>
+          <p class="muted">PITZON / TORQO / RefaxManager</p>
         </div>
       </div>
-      <label>Usuario<input id="username" value="admin" autocomplete="username"></label>
-      <label>Contraseña<input id="password" type="password" autocomplete="current-password"></label>
+      <input id="username" type="hidden" value="admin">
+      <label>Contrasena<input id="password" type="password" autocomplete="current-password" autofocus></label>
       <button style="width:100%">Entrar</button>
       <p id="err" class="error"></p>
     </form>
@@ -308,6 +308,7 @@
             <option value="ALL">Todas</option>
             <option>PITZON</option>
             <option>TORQO</option>
+            <option value="REFACCIONARIA_NUEVA">RefaxManager</option>
           </select>
         </label>
         <label>Buscar
@@ -360,6 +361,7 @@
 
   <script>
     const API = 'https://fxdkwupfkhgyadrxpifs.supabase.co/functions/v1/licencias-panel';
+    const PANEL_VERIFICATION_KEY = 'Pitzon-Rla0ENCv5Rhte6Im';
     let noteId = null;
     let data = [];
 
@@ -395,10 +397,14 @@
       const res = await fetch(API + '/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.value, password: password.value })
+        body: JSON.stringify({
+          username: username.value,
+          password: password.value,
+          verificationKey: PANEL_VERIFICATION_KEY
+        })
       });
       if (!res.ok) {
-        err.textContent = 'Credenciales inválidas';
+        err.textContent = 'Contrasena invalida';
         return;
       }
       const body = await res.json();
