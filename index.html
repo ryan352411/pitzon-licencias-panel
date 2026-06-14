@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Panel de Licencias</title>
+  <link rel="icon" href="data:,">
   <style>
     :root {
       color-scheme: dark;
@@ -381,8 +382,10 @@
     }
 
     function showLogin() {
+      localStorage.removeItem('licensing_token');
       login.style.display = 'grid';
       app.style.display = 'none';
+      setTimeout(() => password.focus(), 0);
     }
 
     function showApp() {
@@ -409,11 +412,11 @@
       }
       const body = await res.json();
       localStorage.setItem('licensing_token', body.token);
+      password.value = '';
       showApp();
     };
 
     logout.onclick = () => {
-      localStorage.removeItem('licensing_token');
       showLogin();
     };
 
@@ -431,7 +434,15 @@
     };
 
     async function load() {
-      await Promise.all([loadSummary(), loadRows(), loadEvents()]);
+      try {
+        await Promise.all([loadSummary(), loadRows(), loadEvents()]);
+      } catch (error) {
+        if (error.message !== 'No autorizado') {
+          console.error(error);
+          err.textContent = 'No se pudo cargar el panel. Intenta entrar de nuevo.';
+          showLogin();
+        }
+      }
     }
 
     async function loadSummary() {
@@ -512,7 +523,21 @@
       };
     }
 
-    if (token()) showApp();
+    async function init() {
+      if (!token()) {
+        showLogin();
+        return;
+      }
+
+      try {
+        await api('/api/me');
+        showApp();
+      } catch {
+        showLogin();
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
