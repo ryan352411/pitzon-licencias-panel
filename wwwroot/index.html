@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de Licencias</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="sidebar">
+      <div>
+        <p class="eyebrow">Suite</p>
+        <h1>Licencias</h1>
+        <p class="muted">Instalaciones, actividad y activacion central.</p>
+      </div>
+
+      <div class="login-panel" id="loginPanel">
+        <label for="username">Usuario</label>
+        <input id="username" type="text" autocomplete="username" placeholder="admin">
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Contraseña">
+        <button id="btnLogin" type="button">Entrar</button>
+        <button id="btnLogout" class="secondary hidden" type="button">Cerrar sesión</button>
+      </div>
+
+      <div class="filters">
+        <label for="appFilter">Aplicacion</label>
+        <select id="appFilter">
+          <option value="ALL">Todas</option>
+          <option value="PITZON">PITZON</option>
+          <option value="TORQO">TORQO</option>
+        </select>
+
+        <label for="searchBox">Buscar</label>
+        <input id="searchBox" type="search" placeholder="Equipo, usuario o ID">
+      </div>
+    </aside>
+
+    <section class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Administracion</p>
+          <h2>Control de instalaciones</h2>
+        </div>
+        <div class="actions">
+          <span id="statusText" class="status">Sin conectar</span>
+          <button id="btnRefresh" type="button">Actualizar</button>
+        </div>
+      </header>
+
+      <section class="metrics" id="metrics"></section>
+
+      <section class="table-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Instalaciones registradas</p>
+            <h3>Equipos</h3>
+          </div>
+          <p id="tableCount" class="muted">0 registros</p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Aplicacion</th>
+                <th>Equipo</th>
+                <th>Usuario Windows</th>
+                <th>Primera vez</th>
+                <th>Ultima actividad</th>
+                <th>Arranques</th>
+                <th>Estado</th>
+                <th>Notas</th>
+                <th>Accion</th>
+              </tr>
+            </thead>
+            <tbody id="installationsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="events-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Actividad reciente</p>
+            <h3>Ultimos arranques</h3>
+          </div>
+        </div>
+        <div id="eventsList" class="events"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

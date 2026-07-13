@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: pitzon-licencias
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: REFACCIONARIA_DB_CONNECTION
+        sync: false
+      - key: LICENSING_ADMIN_USER
+        value: admin
+      - key: LICENSING_ADMIN_PASSWORD
+        sync: false
